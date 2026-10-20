@@ -1,5 +1,9 @@
 <!doctype html>
+<html lang="en">
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="numeric-tools.js"></script>
+<script src="chemistry-equilibrium.js"></script>
 <title>A Level Chemistry</title>
 <meta name="description" content="OCR A Level Chemistry A: interactive lessons, practicals, topic tests and full practice papers.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -928,14 +932,12 @@ let restored=false;
 function restore(){ restored=true; document.querySelectorAll("section.lab .qi[data-q]").forEach(el=>{ const qid=el.dataset.q, k=qkey(qid); if(k&&CSAVED[k]) STATE[qid]=CSAVED[k]; }); Object.keys(QZ).forEach(id=>{ if(document.getElementById(id)&&QZ[id].some((_,i)=>STATE[`${id}-${i}`])) score(id); }); }
 
 /* parse a typed number: accepts 1.2e3, 1.2×10^3, 1.2 x 10^-3, commas */
-function num(s){ if(s==null) return NaN; s=String(s).trim().replace(/,/g,"").replace(/−/g,"-").replace(/\s+/g,"");
-  let m=s.match(/^([-+]?\d*\.?\d+)(?:[x×*]10\^?([-+]?\d+))$/i); if(m) return +m[1]*Math.pow(10,+m[2]);
-  return s===""?NaN:Number(s); }
+function num(s){ return NumericTools.parseNumber(s); }
 function grade(qid){ const [id,i]=qid.split(/-(?=\d+$)/), q=QZ[id][+i], fb=$(`#${qid}-fb`); let ok=false, ans;
   if(q.opts){ const sel=$(`input[name="${qid}"]:checked`); if(!sel){ fb.hidden=false; fb.className="qfb nok"; fb.innerHTML="Choose an answer first."; return; } ans=+sel.value; ok=ans===q.a;
     $$(`[data-q="${qid}"] .qo label`).forEach((l,j)=>{ l.classList.toggle("right",ok&&j===q.a); l.classList.toggle("wrong",!ok&&j===ans); }); }
-  else { const v=num($(`#${qid}-in`).value); if(isNaN(v)){ fb.hidden=false; fb.className="qfb nok"; fb.innerHTML="Type a number (you can write 3.2e-3 for 3.2 × 10⁻³)."; return; }
-    const tol=q.tol??0.02; ok=Math.abs(v-q.a)<=Math.abs(q.a)*tol+(q.abs||0)+1e-12; }
+  else { const v=num($(`#${qid}-in`).value); if(isNaN(v)){ fb.hidden=false; fb.className="qfb nok"; fb.innerHTML="Enter a number or expression, such as 1/4, sqrt(2) or 3.2e-3."; return; }
+    const tol=q.tol??0.02; ok=NumericTools.matches(v,q.a,tol,q.abs||0); }
   fb.hidden=false; fb.className="qfb "+(ok?"ok":"nok"); fb.innerHTML=(ok?"<b>Correct.</b> ":"<b>Not quite.</b> ")+(ok?(q.why||""):(q.hint?q.hint+" ":"")+"Try again, or show the answer.");
   STATE[qid]=ok||STATE[qid]==="shown"?(ok?"ok":"shown"):"no"; persist(qid); score(id); }
 function reveal(qid){ const [id,i]=qid.split(/-(?=\d+$)/), q=QZ[id][+i], fb=$(`#${qid}-fb`);
@@ -1054,7 +1056,7 @@ Object.entries({
 window.EXAM=(()=>{
 const {$,$$,store}=LAB, {num}=LEARN;
 const KEY="learn-motion-exam", saved=store.get(KEY)||{};
-let st; const save=()=>{ clearTimeout(st); st=setTimeout(()=>store.set(KEY,saved),250); };
+const save=()=>store.set(KEY,saved);
 const CARDS={}, PARTS={};
 const kind=`<span class="kind k-exam">Exam</span>`;
 const L="abcdefghij";
@@ -1076,7 +1078,7 @@ function partHTML(p,qi){ const s=saved[p.id]||{};
   let body="";
   if(p.opts){ body=`<div class="xmcq">${p.opts.map((o,j)=>`<label class="${s.done?(j===p.a?"right":(j===s.c?"wrong":"")):""}"><input type="radio" name="${p.id}" value="${j}" ${s.c===j?"checked":""}><span><b>${"ABCD"[j]}</b> ${o}</span></label>`).join("")}</div><div class="xbtns"><button class="btn primary" data-xmcq="${p.id}">Check</button></div>`; }
   else { body=`<textarea class="xans" data-xw="${p.id}" rows="${p.lines||3}" aria-label="Your answer to part ${p.l}" placeholder="Write your answer and working here">${(s.w||"").replace(/</g,"&lt;")}</textarea>`;
-    if(p.ans) body+=`<div class="xfinal"><span>Final answer</span><input type="text" inputmode="decimal" data-xin="${p.id}" value="${s.f??""}" aria-label="Final answer" autocomplete="off"><span class="u">${p.ans.unit||""}</span><button class="btn" data-xchk="${p.id}">Check answer</button></div>`;
+    if(p.ans) body+=`<div class="xfinal"><span>Final answer</span><input type="text" inputmode="decimal" data-xin="${p.id}" value="${String(s.f??"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")}" aria-label="Final answer" autocomplete="off"><span class="u">${p.ans.unit||""}</span><button class="btn" data-xchk="${p.id}">Check answer</button></div>`;
     body+=`<div class="xbtns"><button class="btn primary" data-xms="${p.id}">${s.done?(s.hid?"Show mark scheme":"Hide mark scheme"):"Mark it: show mark scheme"}</button></div>`; }
   let ms="";
   if(p.lor){ ms=`<div class="xmsh"><span>Levels of response mark scheme</span><span>Award: <select data-xlor="${p.id}">${Array.from({length:p.m+1},(_,i)=>`<option value="${i}" ${+s.v===i?"selected":""}>${i}</option>`).join("")}</select> / ${p.m}</span></div>${p.lor.map(([lv,d])=>`<div class="lv"><b>${lv}</b><span>${d}</span></div>`).join("")}${p.ind?`<div class="note"><b>Indicative scientific content</b><ul>${p.ind.map(x=>`<li>${x}</li>`).join("")}</ul></div>`:""}`; }
@@ -1109,14 +1111,17 @@ document.addEventListener("click",e=>{ const t=e.target.closest("[data-xms],[dat
   if(t.dataset.xmcq){ const sel=$(`input[name="${id}"]:checked`); const fb=$(`#${id}-fb`); if(!sel){ fb.hidden=false; fb.className="xfb nok"; fb.textContent="Choose an answer first."; return; } s.c=+sel.value; s.done=true; save(); rerender(p.card); return; }
   if(t.dataset.xms){ const ms=$(`#${id}-ms`); if(!s.done){ s.done=true; s.hid=false; if(!s.t) s.t=[]; } else s.hid=!s.hid; ms.hidden=!!s.hid; t.textContent=s.hid?"Show mark scheme":"Hide mark scheme"; save(); refresh(p.card); return; }
   if(t.dataset.xchk){ const raw=$(`[data-xin="${id}"]`).value, v=num(raw), fb=$(`#${id}-fb`); fb.hidden=false; s.f=raw;
-    if(isNaN(v)){ fb.className="xfb nok"; fb.textContent="Type a number (you can write 3.2e-3 for 3.2 × 10⁻³)."; save(); return; }
-    const a=p.ans, tol=a.tol??0.03, x=a.abs?Math.abs(v):v, ok=Math.abs(x-a.a)<=Math.abs(a.a)*tol+1e-12;
-    if(ok){ fb.className="xfb ok"; fb.innerHTML=`<b>Final answer correct.</b> In ${window.EXAM_BOARD||"OCR"} mark schemes a correct final answer normally earns full marks, so all ${p.m} are ticked. Check your working against the scheme anyway.`; s.done=true; s.hid=false; s.t=p.ms.map(()=>true); save(); const ms=$(`#${id}-ms`); ms.hidden=false; $$(`[data-xt="${id}"]`).forEach(c=>c.checked=true); $(`[data-xms="${id}"]`).textContent="Hide mark scheme"; refresh(p.card); }
+    if(isNaN(v)){ fb.className="xfb nok"; fb.textContent="Enter a number or expression, such as 1/4, sqrt(2) or 3.2e-3."; save(); return; }
+    const a=p.ans, tol=a.tol??0.03, x=a.abs?Math.abs(v):v, ok=NumericTools.matches(x,a.a,tol,a.atol??0);
+    if(ok){ const single=p.m===1&&p.ms.length===1;
+      fb.className="xfb ok"; fb.innerHTML=single?"<b>Final answer correct.</b> One mark awarded.":"<b>Final numerical value correct.</b> Open the mark scheme and tick the marks earned for working, accuracy and any explanation. A matching number alone does not establish all the required method marks.";
+      s.done=true; s.hid=false; s.t=s.t||[]; if(single) s.t=[true]; save();
+      const ms=$(`#${id}-ms`); ms.hidden=false; $$(`[data-xt="${id}"]`).forEach((c,j)=>c.checked=!!s.t[j]); $(`[data-xms="${id}"]`).textContent="Hide mark scheme"; refresh(p.card); }
     else { fb.className="xfb nok"; fb.innerHTML=`<b>That doesn't match.</b> ${a.hint||"Check your working, units and significant figures."} You can still pick up method marks: open the mark scheme to see which you earned.`; save(); } } });
 document.addEventListener("change",e=>{ const t=e.target;
   if(t.dataset.xt){ const id=t.dataset.xt, s=saved[id]=saved[id]||{}; s.t=s.t||[]; s.t[+t.dataset.j]=t.checked; save(); refresh(PARTS[id].card); }
   else if(t.dataset.xlor){ const id=t.dataset.xlor, s=saved[id]=saved[id]||{}; s.v=+t.value; s.done=true; save(); refresh(PARTS[id].card); } });
-document.addEventListener("input",e=>{ const t=e.target; if(t.dataset.xw){ const s=saved[t.dataset.xw]=saved[t.dataset.xw]||{}; s.w=t.value; save(); } });
+document.addEventListener("input",e=>{ const t=e.target, id=t.dataset.xw||t.dataset.xin; if(id){ const s=saved[id]=saved[id]||{}; if(t.dataset.xin) s.f=t.value; else s.w=t.value; save(); } });
 
 return {graph,attach,build,refresh,allParts,pscore,PARTS,CARDS};
 })();
@@ -1789,7 +1794,7 @@ lesson({id:"fa5",group:"m",num:5,lvl:"2.1.3 · Lesson 5",name:"Empirical formula
  blocks:[
   B.text("Two kinds of formula",`<ul><li><b>Empirical formula</b>: the simplest whole-number ratio of atoms of each element in a compound.</li><li><b>Molecular formula</b>: the number and type of atoms of each element in a molecule.</li></ul><p>Ethene, C₂H₄, and cyclohexane, C₆H₁₂, both have the empirical formula CH₂. To find the molecular formula, divide M<sub>r</sub> by the empirical formula mass to get a whole-number multiplier.</p><p><b>Method:</b> mass (or %) of each element → ÷ A<sub>r</sub> → moles → ÷ smallest → ratio → whole numbers (multiply if you get .5, .33, .25).</p>`),
   B.sim("fa5-sim","Empirical formula calculator",stage,panel,`<span>Work down the table</span>`),
-  B.text("Water of crystallisation",`<p>A <b>hydrated</b> salt contains water molecules within its crystal structure: <b>water of crystallisation</b>. Removing it by heating leaves the <b>anhydrous</b> salt. In CuSO₄·5H₂O the blue crystals turn to white anhydrous CuSO₄.</p><p>Heat to <b>constant mass</b> so you know all the water has gone. Then n(H₂O) ÷ n(anhydrous salt) = x. This is <b>PAG 1.2</b> in the Practical Lab.</p>`),
+  B.text("Water of crystallisation",`<p>A <b>hydrated</b> salt contains water molecules within its crystal structure: <b>water of crystallisation</b>. Removing it by heating leaves the <b>anhydrous</b> salt. In CuSO₄·5H₂O the blue crystals turn to white anhydrous CuSO₄.</p><p>Heat to <b>constant mass</b> so you know all the water has gone. Then n(H₂O) ÷ n(anhydrous salt) = x. This is <a class="plink" href="#p12">the adapted water-of-crystallisation practical</a> in the Practical Lab.</p>`),
   B.sim("fa5-sim2","Heating a hydrated salt to constant mass",stage2,panel2,`<span>Constant mass ⇒ all water removed</span>`),
   B.example("Formula of hydrated magnesium sulfate","4.92 g of MgSO₄·xH₂O is heated to constant mass, leaving 2.41 g of MgSO₄. Find x.",[
    ["Mass of water lost","",["4.92 − 2.41 = 2.51 g"]],
@@ -2105,7 +2110,7 @@ lesson({id:"fa11",group:"x",num:11,lvl:"Review",name:"Atoms and reactions: revie
    {q:"Which describes ethanoic acid?",opts:["Strong acid: fully dissociated","Weak acid: partially dissociated","Strong acid: partially dissociated","Weak acid: not dissociated at all"],a:1,why:"Weak acids partially dissociate into H⁺ and the anion."},
    {q:"8.00 g of CuO (M = 79.5) reacts with excess H₂SO₄. What mass of CuSO₄·5H₂O (M = 249.6) could form?",a:25.1,unit:"g",tol:0.01,why:"n = 8.00/79.5 = 0.1006 mol; 0.1006 × 249.6 = 25.1 g."},
    {q:"In 2Na + Cl₂ → 2NaCl, what happens to chlorine?",opts:["It is oxidised from 0 to −1","It is reduced from 0 to −1","It is reduced from −1 to 0","It is oxidised from −1 to 0"],a:1,why:"Chlorine gains electrons: 0 → −1, reduction."}],"Exam-style questions"),
-  B.text("Where next",`<p>Revisit any lesson where you missed a question. In the Practical Lab try <b>PAG 1.1</b> (moles by gas collection), <b>PAG 1.2</b> (water of crystallisation) and <b>PAG 2.1</b> (acid–base titration).</p>`)
+  B.text("Where next",`<p>Revisit any lesson where you missed a question. In the Practical Lab try <b>PAG 1.2</b> (moles by gas collection) and <a class="plink" href="#p12">water of crystallisation (adapted PAG 1 activity)</a> and <b>PAG 2.1</b> (acid–base titration).</p>`)
  ]});
 })();
 </script>
@@ -2958,7 +2963,7 @@ lesson({id:"en2",group:"h",num:2,lvl:"3.2.1 · Lesson 2",name:"Measuring enthalp
  intro:"In a calorimeter the energy released or absorbed by a reaction changes the temperature of a known mass of water or solution. From q = mcΔT and the amount that reacted, you can calculate ΔH.",
  outcomes:[["Determine enthalpy changes directly from experimental results using q = mcΔT","3.2.1(d)"],["Describe how to measure ΔH<sub>c</sub> of a fuel and ΔH<sub>r</sub> of a reaction in solution, including the use of a cooling curve","3.2.1(d)"],["Explain why experimental values differ from data-book values"]],
  blocks:[
-  B.text("Energy transferred",B.eq(`${v("q")} = ${v("m")}${v("c")}Δ${v("T")}`,`ΔH = −${fr(v("q"),v("n"))}`)+`<ul><li>q is the energy transferred in J; m is the mass of the water or solution (1 cm³ of solution ≈ 1 g); c = 4.18 J g⁻¹ K⁻¹; ΔT in K (the same as a change in °C).</li><li>n is the amount, in mol, of the substance that reacted (the limiting reagent, or the fuel burned).</li><li>Divide by 1000 for kJ mol⁻¹. ΔH is negative if the temperature rose (exothermic).</li></ul><p>This is <b>PAG 3.1</b> (combustion) and <b>PAG 3.2</b> (reactions in solution) in the Practical Lab.</p>`),
+  B.text("Energy transferred",B.eq(`${v("q")} = ${v("m")}${v("c")}Δ${v("T")}`,`ΔH = −${fr(v("q"),v("n"))}`)+`<ul><li>q is the energy transferred in J; m is the mass of the water or solution (1 cm³ of solution ≈ 1 g); c = 4.18 J g⁻¹ K⁻¹; ΔT in K (the same as a change in °C).</li><li>n is the amount, in mol, of the substance that reacted (the limiting reagent, or the fuel burned).</li><li>Divide by 1000 for kJ mol⁻¹. ΔH is negative if the temperature rose (exothermic).</li></ul><p>This is <b>PAG 3.3</b> (combustion), <b>PAG 3.2</b> (Hess’s law) and <a class="plink" href="#p32">adapted PAG 3 calorimetry</a> in the Practical Lab.</p>`),
   B.sim("en2-sim","Enthalpy of combustion of an alcohol",stage,panel,`<span>m = mass of water, not fuel</span>`),
   B.text("Errors in combustion experiments",`<p>Experimental ΔH<sub>c</sub> values are usually much less exothermic than data-book values because of <b>heat loss</b> to the surroundings and the calorimeter, <b>incomplete combustion</b> (soot on the calorimeter), <b>evaporation</b> of the alcohol from the wick, and conditions that are not standard (water is formed as a gas, for example). Reduce heat loss with a draught shield, a lid and a copper calorimeter close to the flame.</p>`),
   B.text("Reactions in solution and cooling curves",`<p>For a reaction in solution in a polystyrene cup, take the temperature every 30 s for a few minutes, add the reactant, then continue recording. The mixture starts to cool before the reaction is complete, so the highest reading underestimates ΔT. Draw a best-fit line through the cooling part of the graph and <b>extrapolate back</b> to the time of mixing to find the maximum temperature change.</p>`),
@@ -3089,7 +3094,7 @@ lesson({id:"en5",group:"k",num:5,lvl:"3.2.2 · Lesson 5",name:"Reaction rates an
  outcomes:[["Explain the effect of concentration and pressure on rate using collision theory","3.2.2(a)"],["Calculate reaction rate from the gradient of a graph of amount or concentration against time","3.2.2(b)"],["Describe practical methods for following the progress of a reaction"]],
  blocks:[
   B.text("Collision theory",`<p>The <b>rate of reaction</b> is the change in concentration (or amount) of a reactant or product per unit time: units mol dm⁻³ s⁻¹.</p><p>For particles to react they must <b>collide</b> with the correct orientation and with energy greater than or equal to the <b>activation energy</b>. Most collisions do not lead to reaction.</p><ul><li><b>Concentration</b> (solutions) or <b>pressure</b> (gases): more particles in the same volume, so more frequent collisions and more successful collisions per second.</li><li><b>Surface area</b> of a solid: more particles exposed, so more frequent collisions.</li><li><b>Temperature</b>: particles move faster, collide more often and, most importantly, a greater proportion have energy ≥ E<sub>a</sub> (next lesson).</li></ul>`),
-  B.text("Measuring rates",`<p>Follow a reaction by measuring something that changes with time: the volume of gas evolved (gas syringe or upturned measuring cylinder), the loss of mass as a gas escapes, a colour change (colorimeter) or pH. On a graph of amount against time, the <b>rate</b> at any instant is the gradient of the <b>tangent</b> to the curve; the <b>initial rate</b> is the gradient at t = 0. The rate decreases as the reactants are used up.</p><p>This is <b>PAG 9.1</b> (continuous monitoring) in the Practical Lab.</p>`),
+  B.text("Measuring rates",`<p>Follow a reaction by measuring something that changes with time: the volume of gas evolved (gas syringe or upturned measuring cylinder), the loss of mass as a gas escapes, a colour change (colorimeter) or pH. On a graph of amount against time, the <b>rate</b> at any instant is the gradient of the <b>tangent</b> to the curve; the <b>initial rate</b> is the gradient at t = 0. The rate decreases as the reactants are used up.</p><p>This is <b>PAG 9.2</b> (continuous monitoring) in the Practical Lab.</p>`),
   B.sim("en5-sim","Marble chips and hydrochloric acid",stage,panel,`<span>CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂</span><span>Acid in excess for c ≥ 0.5</span>`),
   B.check([
    {q:"Why does increasing concentration increase the rate?",opts:["Particles have more energy","More particles per unit volume, so more frequent collisions","The activation energy decreases","The reaction becomes exothermic"],a:1,why:"More collisions per second, so more successful collisions per second."},
@@ -3296,7 +3301,7 @@ lesson({id:"en9",group:"x",num:9,lvl:"Review",name:"Physical chemistry: review",
    {q:"Why does a 10 K rise in temperature often roughly double the rate?",opts:["Collision frequency doubles","Many more molecules have energy ≥ E<sub>a</sub>","E<sub>a</sub> halves","More product forms"],a:1,why:"The fraction of molecules above E<sub>a</sub> increases greatly; collision frequency rises only a little."},
    {q:"What is ΔH<sub>f</sub> of Fe(s) under standard conditions?",a:0,unit:"kJ mol⁻¹",tol:0,abs:0.001,why:"Element in its standard state."},
    {q:"In the Haber process, why is a pressure of about 200 atm used rather than 1000 atm?",opts:["Yield is lower at 1000 atm","Very high pressure is expensive and hazardous","The catalyst does not work at high pressure","Rate is slower at high pressure"],a:1,why:"A compromise between yield/rate and cost/safety."}],"Exam-style questions"),
-  B.text("Where next",`<p>Practicals: <b>PAG 3.1</b>, <b>PAG 3.2</b> (enthalpy) and <b>PAG 9.1</b> (rates).</p>`)
+  B.text("Where next",`<p>Practicals: <b>PAG 3.3</b> (combustion), <b>PAG 3.2</b> (Hess’s law) and <b>PAG 9.2</b> (rates).</p>`)
  ]});
 })();
 </script>
@@ -3770,7 +3775,7 @@ lesson({id:"oc10",group:"s",num:10,lvl:"4.2.3 · Lesson 10",name:"Practical tech
  outcomes:[["Describe the use of Quickfit apparatus for heating under reflux and for distillation","4.2.3(a)"],["Describe purification of an organic liquid: separating funnel, drying with an anhydrous salt, redistillation","4.2.3(a)"],["Identify functional groups and plan two-stage synthetic routes using reactions in this module","4.2.3(b)–(c)"]],
  blocks:[
   B.sim("oc10-sim","Apparatus",stage,panel,""),
-  B.text("Purifying an organic liquid",`<ol><li>Transfer the crude product to a separating funnel; wash with sodium hydrogencarbonate solution to neutralise acid (release the pressure from CO₂), then with water.</li><li>Run off the organic layer into a dry flask; add anhydrous MgSO₄ until the liquid is clear.</li><li>Decant or filter off the drying agent, then redistil, collecting the liquid that boils within a degree or two of the expected boiling point.</li></ol><p>This is <b>PAG 5.1</b> in the Practical Lab.</p>`),
+  B.text("Purifying an organic liquid",`<ol><li>Transfer the crude product to a separating funnel; wash with sodium hydrogencarbonate solution to neutralise acid (release the pressure from CO₂), then with water.</li><li>Run off the organic layer into a dry flask; add anhydrous MgSO₄ until the liquid is clear.</li><li>Decant or filter off the drying agent, then redistil, collecting the liquid that boils within a degree or two of the expected boiling point.</li></ol><p>This is <b>PAG 5.2</b> in the Practical Lab.</p>`),
   B.sim("oc10-sim2","Synthetic route finder",stage2,panel2,`<span>Shortest route using the reactions of module 4</span>`),
   B.check([
    {q:"Why is a reaction heated under reflux?",opts:["To separate the product","To heat for a long time without losing volatile substances","To dry the product","To cool the reaction"],a:1,why:"Vapours condense and return to the flask."},
@@ -3917,7 +3922,7 @@ lesson({id:"oc12",group:"x",num:12,lvl:"Review",name:"Core organic: review",icon
    {q:"Which radical is regenerated in the catalytic destruction of ozone by CFCs?",opts:["O•","Cl•","ClO•","CF₃•"],a:1,why:"Cl• + O₃ → ClO• + O₂; ClO• + O → Cl• + O₂."},
    {q:"What is the main product when propene reacts with steam (H₃PO₄ catalyst)?",opts:["Propan-1-ol","Propan-2-ol","Propanal","Propanone"],a:1,why:"Via the secondary carbocation (Markownikoff)."},
    {q:"The molecular ion peak of a compound is at m/z = 58; IR shows a C=O at 1715 cm⁻¹ and no O–H. Which is it?",opts:["Butane","Propanone","Propan-1-ol","Ethanoic acid"],a:1,why:"C₃H₆O, a ketone (or propanal)."}],"Exam-style questions"),
-  B.text("Where next",`<p>Practical Lab: <b>PAG 5.1</b> (synthesis of an organic liquid) and <b>PAG 7.1</b> (tests for organic functional groups).</p>`)
+  B.text("Where next",`<p>Practical Lab: <b>PAG 5.2</b> (synthesis of an organic liquid) and <b>PAG 7.1</b> (tests for organic functional groups).</p>`)
  ]});
 })();
 </script>
@@ -4023,7 +4028,7 @@ lesson({id:"ph2",group:"r",num:2,lvl:"5.1.1 · Lesson 2",name:"Rate graphs and h
  intro:"The shape of a concentration–time graph, or of a rate–concentration graph, reveals the order of a reaction. First-order reactions have a constant half-life, which gives a quick way to find k.",
  outcomes:[["Deduce orders from the shapes of concentration–time graphs, including constant half-life for first order","5.1.1(d)"],["Calculate the rate at a given time from the gradient of a tangent to a concentration–time graph","5.1.1(d)"],["Determine k for a first-order reaction using k = ln 2 / t<sub>½</sub>","5.1.1(e)"],["Deduce orders from rate–concentration graphs","5.1.1(f)"]],
  blocks:[
-  B.text("Graph shapes",`<div class="tbl-wrap"><table class="tbl-mini"><thead><tr><th>Order</th><th>[A]–time</th><th>rate–[A]</th></tr></thead><tbody><tr><td>0</td><td>straight line, constant negative gradient</td><td>horizontal line</td></tr><tr><td>1</td><td>curve with constant half-life</td><td>straight line through the origin</td></tr><tr><td>2</td><td>steeper curve; half-life increases as [A] falls</td><td>curve (parabola) through the origin</td></tr></tbody></table></div><p><b>Half-life, t<sub>½</sub></b>: the time taken for the concentration of a reactant to fall to half its value. For a first-order reaction it is constant:</p>`+B.eq(`${v("k")} = ${fr("ln 2",v("t")+"<sub>½</sub>")}`)+`<p>For a zero-order reaction, the gradient of the [A]–t line equals −k. Continuous monitoring (for example colorimetry) produces these graphs: <b>PAG 9.2</b>.</p>`),
+  B.text("Graph shapes",`<div class="tbl-wrap"><table class="tbl-mini"><thead><tr><th>Order</th><th>[A]–time</th><th>rate–[A]</th></tr></thead><tbody><tr><td>0</td><td>straight line, constant negative gradient</td><td>horizontal line</td></tr><tr><td>1</td><td>curve with constant half-life</td><td>straight line through the origin</td></tr><tr><td>2</td><td>steeper curve; half-life increases as [A] falls</td><td>curve (parabola) through the origin</td></tr></tbody></table></div><p><b>Half-life, t<sub>½</sub></b>: the time taken for the concentration of a reactant to fall to half its value. For a first-order reaction it is constant:</p>`+B.eq(`${v("k")} = ${fr("ln 2",v("t")+"<sub>½</sub>")}`)+`<p>For a zero-order reaction, the gradient of the [A]–t line equals −k. Continuous monitoring produces these graphs. Try <a class="plink" href="#p91">PAG 9.2 (mass loss)</a> or <a class="plink" href="#p92">adapted PAG 9 colorimetry</a>.</p>`),
   B.sim("ph2-sim","Order from graphs",stage,panel,`<span>Dashed lines: half-lives</span>`),
   B.check([
    {q:"A first-order reaction has a half-life of 25 s. Calculate k.",a:0.0277,unit:"s⁻¹",tol:0.01,why:"ln 2/25 = 0.0277 s⁻¹."},
@@ -4062,7 +4067,7 @@ lesson({id:"ph3",group:"r",num:3,lvl:"5.1.1 · Lesson 3",name:"Rate-determining 
  blocks:[
   B.text("The rate-determining step",`<p>Most reactions happen in several steps. The <b>rate-determining step</b> is the slowest step in the mechanism. The rate equation includes only species involved in (or before) the rate-determining step; the orders show how many of each particle take part in it. Species that are zero order react in a fast step after it.</p>`),
   B.sim("ph3-sim2","Rate equations and mechanisms",stage2,panel2,""),
-  B.text("The Arrhenius equation",B.eq(`${v("k")} = ${v("A")}e<sup>−E<sub>a</sub>/${v("R")}${v("T")}</sup>`,`ln ${v("k")} = −${fr("E<sub>a</sub>",v("R"))} × ${fr("1",v("T"))} + ln ${v("A")}`)+`<p>A is the pre-exponential factor (related to collision frequency and orientation). A graph of ln k against 1/T is a straight line with gradient <b>−E<sub>a</sub>/R</b> and intercept ln A. E<sub>a</sub> is in J mol⁻¹ when R = 8.314 J mol⁻¹ K⁻¹. This is <b>PAG 10.2</b> in the Practical Lab.</p>`),
+  B.text("The Arrhenius equation",B.eq(`${v("k")} = ${v("A")}e<sup>−E<sub>a</sub>/${v("R")}${v("T")}</sup>`,`ln ${v("k")} = −${fr("E<sub>a</sub>",v("R"))} × ${fr("1",v("T"))} + ln ${v("A")}`)+`<p>A is the pre-exponential factor (related to collision frequency and orientation). A graph of ln k against 1/T is a straight line with gradient <b>−E<sub>a</sub>/R</b> and intercept ln A. E<sub>a</sub> is in J mol⁻¹ when R = 8.314 J mol⁻¹ K⁻¹. This is <b>PAG 10.3</b> in the Practical Lab.</p>`),
   B.sim("ph3-sim","Arrhenius plot",stage,panel,`<span>T from 280 K to 360 K</span>`),
   B.example("E<sub>a</sub> from a gradient","A plot of ln k against 1/T has a gradient of −6200 K. Calculate E<sub>a</sub>.",[
    ["Gradient = −E<sub>a</sub>/R","",[`E<sub>a</sub> = 6200 × 8.314 = 51 547 J mol⁻¹ = ${res("51.5 kJ mol⁻¹")}`]]]),
@@ -4177,7 +4182,7 @@ lesson({id:"ph6",group:"a",num:6,lvl:"5.1.3 · Lesson 6",name:"Weak acids, Ka an
   B.keypoints(["K<sub>a</sub> = [H⁺][A⁻]/[HA]; pK<sub>a</sub> = −log K<sub>a</sub>.","Weak acid: [H⁺] = √(K<sub>a</sub>[HA]).","K<sub>w</sub> = [H⁺][OH⁻] = 1.00 × 10⁻¹⁴ at 298 K.","Strong base: [H⁺] = K<sub>w</sub>/[OH⁻]."]),
   B.mistakes(["Using [H⁺] = [HA] for a weak acid.","Forgetting the square root.","Using pOH without converting (OCR uses K<sub>w</sub> directly)."])
  ],onShow:()=>{draw();drawB();}});
-function draw(){ const a=AC[+$("#ph6-a").value], c=10**val("ph6-c"), Ka=a[1]; const Happ=Math.sqrt(Ka*c); const Hex=(-Ka+Math.sqrt(Ka*Ka+4*Ka*c))/2+1e-7*0; const d=Hex/c*100;
+function draw(){ const a=AC[+$("#ph6-a").value], c=10**val("ph6-c"), Ka=a[1]; const Happ=Math.sqrt(Ka*c); const Hex=10**-ChemistryEquilibrium.acidPH(c,0,Ka); const d=Hex/c*100;
   const W=520; let g=`<text x="20" y="40" font-size="13">HA</text><rect x="80" y="24" width="${(1-Hex/c)*W}" height="26" class="fdat" opacity=".8"/><text x="20" y="90" font-size="13">H⁺ and A⁻</text><rect x="80" y="74" width="${Math.max(2,Hex/c*W)}" height="26" class="facc"/><text x="${86+Math.max(2,Hex/c*W)}" y="92" font-size="12">${d.toFixed(2)} %</text>`;
   $("#ph6-svg").innerHTML=g+`<text x="80" y="140" font-size="13">K<tspan dy="4" font-size="9">a</tspan><tspan dy="-4"> = ${sci(Ka,3)} mol dm⁻³ · [HA] = ${sci(c,3)} mol dm⁻³</tspan></text>`;
   set("ph6-w",`[H⁺] ≈ √(K<sub>a</sub> × [HA]) = √(${sci(Ka,3)} × ${sci(c,3)}) = ${sci(Happ,3)} mol dm⁻³ ⇒ pH = ${(-Math.log10(Happ)).toFixed(2)}`);
@@ -4213,8 +4218,7 @@ lesson({id:"ph7",group:"a",num:7,lvl:"5.1.3 · Lesson 7",name:"Buffer solutions"
   B.keypoints(["Buffer: weak acid + conjugate base; minimises pH change.","Added H⁺ removed by A⁻; added OH⁻ removed by HA (via H⁺).","[H⁺] = K<sub>a</sub>[HA]/[A⁻]; pH = pK<sub>a</sub> when equal.","Blood: H₂CO₃/HCO₃⁻, pH 7.35–7.45."]),
   B.mistakes(["Saying a buffer keeps the pH completely constant.","Using the √ formula for a buffer.","Forgetting to subtract moles when partial neutralisation is used."])
  ],onShow:()=>draw()});
-function draw(){ const nHA=val("ph7-ha"), nA=val("ph7-a"), x=val("ph7-x"); const pHb=vol=>{ const n=vol/1000; let ha=nHA, a=nA; if(n>0){ ha-=n; a+=n; } else { ha-=n; a+=n; } /* n<0: acid added: a decreases */
-    if(ha<=0){ const oh=-ha/(0.1+Math.abs(vol)/1000); return 14+Math.log10(Math.max(oh,1e-7)); } if(a<=0){ const h=-a/(0.1+Math.abs(vol)/1000); return -Math.log10(Math.max(h,1e-7)); } return -Math.log10(Ka*ha/a); };
+function draw(){ const nHA=val("ph7-ha"), nA=val("ph7-a"), x=val("ph7-x"); const pHb=vol=>ChemistryEquilibrium.bufferPH(nHA,nA,vol,Ka);
   const pHw=vol=>{ const n=Math.abs(vol)/1000, V=0.1+n; if(vol===0) return 7; const c=n/V; return vol>0?14+Math.log10(c):-Math.log10(c); };
   const A=axes({W:560,H:300,x0:-15,x1:15,y0:0,y1:14,xs:5,ys:2,xt:"← HCl added / cm³   ·   NaOH added / cm³ →",yt:"pH"});
   const p1=[], p2=[]; for(let vv=-15;vv<=15.01;vv+=0.25){ p1.push([vv,pHb(vv)]); p2.push([vv,pHw(vv)]); }
@@ -4235,7 +4239,7 @@ lesson({id:"ph8",group:"a",num:8,lvl:"5.1.3 · Lesson 8",name:"Titration curves 
  intro:"A pH titration curve shows how pH changes as one solution is added to another. The shape depends on whether the acid and base are strong or weak, and it decides which indicator will show the end point accurately.",
  outcomes:[["Interpret pH titration curves for strong and weak acids and bases, including the equivalence point and vertical section","5.1.3(o)"],["Explain the choice of indicator using the pH range of the vertical section and the indicator's colour-change range","5.1.3(o)"],["Use the half-neutralisation point of a weak acid titration to find pK<sub>a</sub>"]],
  blocks:[
-  B.text("Features of the curves",`<ul><li>The <b>equivalence point</b> is where the acid and base have exactly reacted: the centre of the vertical section.</li><li>Strong acid + strong base: vertical section from about pH 3 to 11; equivalence at pH 7.</li><li>Weak acid + strong base: starts higher, buffer region, vertical section about pH 7–11; equivalence above 7. At half-neutralisation pH = pK<sub>a</sub>.</li><li>Strong acid + weak base: vertical section about pH 3–7; equivalence below 7.</li><li>Weak acid + weak base: no sharp vertical section; no indicator is suitable.</li></ul><p>An <b>indicator</b> is a weak acid, HIn ⇌ H⁺ + In⁻, whose two forms have different colours. The <b>end point</b> is when the indicator changes colour. Choose an indicator whose colour-change range lies <b>within the vertical section</b>. This is <b>PAG 11.1</b> in the Practical Lab.</p>`),
+  B.text("Features of the curves",`<ul><li>The <b>equivalence point</b> is where the acid and base have exactly reacted: the centre of the vertical section.</li><li>Strong acid + strong base: vertical section from about pH 3 to 11; equivalence at pH 7.</li><li>Weak acid + strong base: starts higher, buffer region, vertical section about pH 7–11; equivalence above 7. At half-neutralisation pH = pK<sub>a</sub>.</li><li>Strong acid + weak base: vertical section about pH 3–7; equivalence below 7.</li><li>Weak acid + weak base: no sharp vertical section; no indicator is suitable.</li></ul><p>An <b>indicator</b> is a weak acid, HIn ⇌ H⁺ + In⁻, whose two forms have different colours. The <b>end point</b> is when the indicator changes colour. Choose an indicator whose colour-change range lies <b>within the vertical section</b>. This is <b>PAG 11.2</b> in the Practical Lab.</p>`),
   B.sim("ph8-sim","Titration curves",stage,panel,`<span>Shaded band: indicator colour-change range</span>`),
   B.check([
    {q:"Which indicator is suitable for titrating ethanoic acid with sodium hydroxide?",opts:["Methyl orange","Phenolphthalein","Neither","Both"],a:1,why:"The vertical section is about pH 7–11; phenolphthalein changes at 8.2–10."},
@@ -4327,7 +4331,7 @@ lesson({id:"ph9",group:"x",num:9,lvl:"Review",name:"Rates, equilibrium and pH: r
    {q:"Which plot gives a straight line for the Arrhenius equation?",opts:["k against T","ln k against T","ln k against 1/T","k against 1/T"],a:2,why:"ln k = −(E<sub>a</sub>/R)(1/T) + ln A."},
    {q:"In a mixture at 100 kPa, N₂ is 0.25 mol of 1.00 mol total. What is p(N₂)?",a:25,unit:"kPa",tol:0.001,why:"0.25 × 100."},
    {q:"Why is the pH of pure water at 50 °C less than 7, yet the water is still neutral?",opts:["It becomes acidic","K<sub>w</sub> increases but [H⁺] still equals [OH⁻]","CO₂ dissolves","Ions are destroyed"],a:1,why:"Neutral means [H⁺] = [OH⁻]."}],"Exam-style questions"),
-  B.text("Where next",`<p>Practicals: <b>PAG 9.1</b>, <b>PAG 10.1</b>, <b>PAG 10.2</b> (rates) and <b>PAG 11.1</b> (pH titration curve).</p>`)
+  B.text("Where next",`<p>Practicals: <b>PAG 9.2</b>, <b>PAG 10.1</b>, <b>PAG 10.3</b> (rates) and <b>PAG 11.2</b> (pH titration curve).</p>`)
  ]});
 })();
 </script>
@@ -5811,13 +5815,13 @@ return {svg,eb,btns,ro,note,table,anim,del,H,fitO,titration};
 </script>
 
 <script>
-/* PAG 1.1 Relative atomic mass of magnesium */
+/* PAG 1.2 Relative atomic mass of magnesium */
 (()=>{
 const {$,C,W,fx,gauss,rows,build,register,plot,css}=LAB, P=PG;
 const st={m:0,V:0,k:0,busy:false,done:false,data:[]};
 const stage=P.svg("p11","A conical flask of acid connected to a gas syringe");
 const panel=P.btns([["p11-new","Weigh a new strip of Mg"],["p11-go","Add Mg to the acid",1]])+P.ro([["p11-m","Mass of Mg"],["p11-v","Gas syringe"]])+P.btns([["p11-rec","Record result",1]])+P.note("p11-h","Weigh a strip of magnesium ribbon.");
-build({id:"p11",eyebrow:P.eb("1.1","Moles determination"),title:"Relative atomic mass of magnesium",
+build({id:"p11",eyebrow:P.eb("1.2","Moles determination"),title:"Relative atomic mass of magnesium",
  intro:"React weighed strips of magnesium ribbon with excess hydrochloric acid and collect the hydrogen in a gas syringe. The gradient of a graph of gas volume against mass gives the relative atomic mass of magnesium.",
  stage,bar:`<span>Mg(s) + 2HCl(aq) → MgCl₂(aq) + H₂(g)</span><span>Molar gas volume at RTP: 24.0 dm³ mol⁻¹</span>`,panel,
  results:P.table("p11",["Mass of Mg / g","Volume of H₂ / cm³"]),graphTitle:"Volume of hydrogen against mass of magnesium",graphSub:"Best-fit line through the origin",
@@ -5844,18 +5848,18 @@ function work(){ const el=$("#p11-work"), pts=st.data.map(r=>[r.m,r.V]); if(pts.
   const k=P.fitO(pts), Ar=24000/k, {fr,res,step,chips}=W;
   el.innerHTML=chips([["Gradient",`${fx(k,0)} cm³ g⁻¹`],["Relative atomic mass",fx(Ar,1),1],["Data book value","24.3"]])+`<div class="work" style="margin-top:14px">`+step(1,"Gradient of the best-fit line","Line through the origin",[`gradient = ${fx(k,1)} cm³ g⁻¹`])+step(2,"Moles of H₂ per gram","1 mol of gas occupies 24 000 cm³",[`${fr(fx(k,1),"24 000")} = ${CH.sci(k/24000,3)} mol g⁻¹`])+step(3,"A<sub>r</sub> of Mg","1 mol Mg gives 1 mol H₂",[`A<sub>r</sub> = ${fr("24 000",fx(k,1))} = ${res(fx(Ar,1))}`])+`</div><p class="muted" style="margin-top:8px">Percentage difference from 24.3: ${fx(Math.abs(Ar-24.3)/24.3*100,1)}%</p>`; }
 draw(); refresh();
-register({id:"p11",group:"ocr",num:11,pag:"1.1",name:"A<sub>r</sub> of magnesium",icon:"pg-gas",onShow:()=>{draw();graph();}});
+register({id:"p11",group:"ocr",num:11,pag:"1.2",name:"A<sub>r</sub> of magnesium",icon:"pg-gas",onShow:()=>{draw();graph();}});
 })();
 </script>
 <script>
-/* PAG 1.2 Water of crystallisation */
+/* PAG 1 (adapted) Water of crystallisation */
 (()=>{
 const {$,C,W,fx,gauss,rows,build,register,plot}=LAB, P=PG;
 const CR=+(18.2+Math.random()*2).toFixed(2);
 const st={step:0,salt:0,water:0,left:1,heat:0,mass:null,heating:false,data:[]};
 const stage=P.svg("p12","A crucible of copper(II) sulfate heated on a pipeclay triangle");
 const panel=P.btns([["p12-add","Add hydrated CuSO₄ to the crucible"],["p12-heat","Heat for 2 minutes",1],["p12-wt","Cool and weigh"]])+P.ro([["p12-bal","Balance"],["p12-col","Colour"]])+P.btns([["p12-new","Start again"]])+P.note("p12-h","The empty crucible has been weighed. Add the hydrated salt.");
-build({id:"p12",eyebrow:P.eb("1.2","Moles determination"),title:"Water of crystallisation in hydrated copper(II) sulfate",
+build({id:"p12",eyebrow:P.eb("1 (adapted)","Moles determination"),title:"Water of crystallisation in hydrated copper(II) sulfate",
  intro:"Heat hydrated copper(II) sulfate, CuSO₄·xH₂O, in a crucible to drive off the water of crystallisation. Heat to constant mass, then use the masses to find x.",
  stage,bar:`<span>CuSO₄·xH₂O(s) → CuSO₄(s) + xH₂O(g)</span><span>M(CuSO₄) = 159.6; M(H₂O) = 18.0</span>`,panel,
  results:P.table("p12",["Weighing","Mass of crucible + contents / g"]),graphTitle:"Mass against number of heatings",graphSub:"Heat to constant mass (within 0.01 g)",
@@ -5880,7 +5884,7 @@ function work(){ const el=$("#p12-work"), H=st.data.filter(r=>r.h); if(H.length<
   const {fr,res,step,chips}=W, m0=st.data[1].m-CR, m1=H[H.length-1].m-CR, mw=m0-m1, nA=m1/159.6, nW=mw/18.0, x=nW/nA;
   el.innerHTML=chips([["Mass of CuSO₄",`${fx(m1,2)} g`],["Mass of water",`${fx(mw,2)} g`],["x",fx(x,2)+" ≈ "+Math.round(x),1]])+`<div class="work" style="margin-top:14px">`+step(1,"Masses",null,[`hydrated salt = ${fx(st.data[1].m,2)} − ${fx(CR,2)} = ${fx(m0,2)} g`,`anhydrous CuSO₄ = ${fx(H[H.length-1].m,2)} − ${fx(CR,2)} = ${fx(m1,2)} g; water = ${fx(mw,2)} g`])+step(2,"Moles",null,[`n(CuSO₄) = ${fr(fx(m1,2),"159.6")} = ${fx(nA,5)} mol`,`n(H₂O) = ${fr(fx(mw,2),"18.0")} = ${fx(nW,5)} mol`])+step(3,"Ratio",null,[`x = ${fr(fx(nW,5),fx(nA,5))} = ${res(fx(x,2))} → CuSO₄·${Math.round(x)}H₂O`])+`</div>`; }
 draw(); refresh();
-register({id:"p12",group:"ocr",num:12,pag:"1.2",name:"Water of crystallisation",icon:"pg-crys",onShow:()=>{draw();graph();}});
+register({id:"p12",group:"ocr",num:12,pag:"1 (adapted)",name:"Water of crystallisation",icon:"pg-crys",onShow:()=>{draw();graph();}});
 })();
 </script>
 <script>
@@ -5927,14 +5931,14 @@ P.titration({id:"px1",group:"ext",num:1,name:"Redox titration",icon:"pg-redox",
 window.PGcup=(cx,by,lv,col)=>`${LAB.C.shadow(cx,by+3,52,5)}<path d="M${cx-46} ${by-120}L${cx-36} ${by}h72l10-120z" fill="#f4f2ec" stroke="#cfcac0"/><path d="M${cx-41} ${by-120+120*(1-lv)}L${cx-36} ${by-4}h72l5-${116*lv}z" fill="${col}" opacity=".55"/><path d="M${cx-46} ${by-120}L${cx-36} ${by}h72l10-120" fill="none" stroke="#bdb6a8"/><rect x="${cx-52}" y="${by-128}" width="104" height="9" rx="3" fill="#e9e6de" stroke="#cfcac0"/>`;
 </script>
 <script>
-/* PAG 3.1 Enthalpy change of combustion */
+/* PAG 3.3 Enthalpy change of combustion */
 (()=>{
 const {$,C,W,fx,gauss,rows,build,register,bars,setThermo}=LAB, P=PG;
 const AL=[["methanol",32.0,726,1],["ethanol",46.0,1367,2],["propan-1-ol",60.0,2021,3],["butan-1-ol",74.0,2676,4]];
 const st={a:1,T0:+(18+Math.random()*3).toFixed(1),T:0,m0:0,m:0,lit:false,done:false,eff:0.5,data:[]}; st.T=st.T0;
 const stage=P.svg("p31","A spirit burner heating water in a copper calorimeter",`${C.stand(250,420,90)}`,`${C.clamp(250,180,420,60)}${C.thermo(452,40,250,"p31-th",{tMin:0,tMax:60})}`);
 const panel=`<div class="field"><div class="lbl">Alcohol</div><select id="p31-a">${AL.map((a,i)=>`<option value="${i}" ${i===1?"selected":""}>${a[0]}</option>`).join("")}</select></div>`+P.btns([["p31-w","Weigh the burner"],["p31-l","Light the burner",1],["p31-x","Put it out"]])+P.ro([["p31-T","Temperature"],["p31-dT","Rise"],["p31-m","Burner mass"]])+P.btns([["p31-rec","Reweigh and record",1]])+P.note("p31-h","100 cm³ of water is in the copper can. Weigh the spirit burner.");
-build({id:"p31",eyebrow:P.eb("3.1","Enthalpy determination"),title:"Enthalpy change of combustion of alcohols",
+build({id:"p31",eyebrow:P.eb("3.3","Enthalpy determination"),title:"Enthalpy change of combustion of alcohols",
  intro:"Burn an alcohol in a spirit burner under a copper can containing 100 g of water. Use the temperature rise and the mass of alcohol burned to calculate the enthalpy change of combustion, and compare it with the data-book value.",
  stage,bar:`<span>q = mcΔT, c = 4.18 J g⁻¹ K⁻¹</span><span>ΔcH = −q / n</span>`,panel,
  results:P.table("p31",["Alcohol","Mass burned / g","ΔT / K","Δ<sub>c</sub>H / kJ mol⁻¹"]),graphTitle:"Experimental and data-book values",graphSub:"Bars: −ΔcH from your results; dashed: data book",
@@ -5961,11 +5965,11 @@ function work(){ const el=$("#p31-work"), r=st.data[st.data.length-1]; if(!r){ e
   const a=AL[r.a], {fr,res,step,chips}=W, q=100*4.18*r.dT, n=r.dm/a[1];
   el.innerHTML=chips([["Alcohol",a[0]],["Enthalpy change of combustion",`${fx(r.H,0)} kJ mol⁻¹`,1],["Data book",`−${a[2]} kJ mol⁻¹`]])+`<div class="work" style="margin-top:14px">`+step(1,"Energy transferred to the water","q = mcΔT",[`q = 100 × 4.18 × ${fx(r.dT,1)} = ${fx(q,0)} J`])+step(2,"Moles of alcohol burned",null,[`n = ${fr(fx(r.dm,2),fx(a[1],1))} = ${fx(n,5)} mol`])+step(3,"Enthalpy change of combustion","Negative: exothermic",[`Δ<sub>c</sub>H = −${fr(fx(q/1000,3),fx(n,5))} = ${res(fx(r.H,0)+" kJ mol⁻¹")}`])+`</div><p class="muted" style="margin-top:8px">${fx(100*(-r.H)/a[2],0)}% of the data-book value: most of the heat is lost to the surroundings.</p>`; }
 draw(); refresh();
-register({id:"p31",group:"ocr",num:31,pag:"3.1",name:"Enthalpy of combustion",icon:"pg-comb",onShow:()=>{draw();graph();}});
+register({id:"p31",group:"ocr",num:31,pag:"3.3",name:"Enthalpy of combustion",icon:"pg-comb",onShow:()=>{draw();graph();}});
 })();
 </script>
 <script>
-/* PAG 3.2 Displacement reaction: temperature–time graph and extrapolation */
+/* PAG 3 (adapted) Displacement reaction: temperature–time graph and extrapolation */
 (()=>{
 const {$,C,W,fx,gauss,rows,build,register,plot,css,setThermo,linfit}=LAB, P=PG;
 const TA=210, DT=+(50+Math.random()*3).toFixed(1);
@@ -5973,7 +5977,7 @@ const st={t:0,T0:+(19+Math.random()*2).toFixed(1),added:false,data:[]};
 const Tat=t=>{ if(t<TA) return st.T0; const x=t-TA; return st.T0+DT*(1-Math.exp(-x/25))-0.018*x; };
 const stage=P.svg("p32","A polystyrene cup of copper(II) sulfate solution with a thermometer","",`${C.thermo(470,40,280,"p32-th",{tMin:0,tMax:80})}`);
 const panel=P.btns([["p32-r","Take a reading",1],["p32-z","Add the zinc powder (at 3.5 min)"]])+P.ro([["p32-t","Time"],["p32-T","Temperature"]])+P.btns([["p32-new","Start again"]])+P.note("p32-h","Take readings every 30 s. Add the zinc at 3.5 minutes, then keep reading to 10 minutes.");
-build({id:"p32",eyebrow:P.eb("3.2","Enthalpy determination"),title:"Enthalpy change of a displacement reaction",
+build({id:"p32",eyebrow:P.eb("3 (adapted)","Enthalpy determination"),title:"Enthalpy change of a displacement reaction",
  intro:"Add excess zinc powder to 25.0 cm³ of 1.00 mol dm⁻³ copper(II) sulfate solution in a polystyrene cup. Plot temperature against time and extrapolate the cooling line back to the time of mixing to allow for heat lost while the reaction happens.",
  stage,bar:`<span>Zn(s) + CuSO₄(aq) → ZnSO₄(aq) + Cu(s)</span><span>Readings every 30 s; zinc added at 3.5 min</span>`,panel,
  results:P.table("p32",["Time / s","Temperature / °C"]),graphTitle:"Temperature against time",graphSub:"Extrapolate both lines to 210 s",
@@ -5994,11 +5998,11 @@ function work(){ const el=$("#p32-work"), F=fits(); if(!F){ el.innerHTML=`<p cla
   const dT=F.top-F.b, q=25.0*4.18*dT, H=-q/0.0250/1000, {fr,res,step,chips}=W;
   el.innerHTML=chips([["Extrapolated ΔT",`${fx(dT,1)} K`],["Enthalpy change",`${fx(H,0)} kJ mol⁻¹`,1],["Data book","−217 kJ mol⁻¹"]])+`<div class="work" style="margin-top:14px">`+step(1,"Extrapolate to 210 s","Start line and cooling line",[`start ${fx(F.b,1)} °C; cooling line at 210 s: ${fx(F.top,1)} °C; ΔT = ${fx(dT,1)} K`])+step(2,"Energy released","q = mcΔT, m = 25.0 g",[`q = 25.0 × 4.18 × ${fx(dT,1)} = ${fx(q,0)} J`])+step(3,"Moles of CuSO₄","1.00 × 0.0250",[`n = 0.0250 mol`])+step(4,"Enthalpy change",null,[`Δ<sub>r</sub>H = −${fr(fx(q/1000,3),"0.0250")} = ${res(fx(H,0)+" kJ mol⁻¹")}`])+`</div>`; }
 draw(); refresh();
-register({id:"p32",group:"ocr",num:32,pag:"3.2",name:"Temperature–time extrapolation",icon:"pg-temp",onShow:()=>{draw();graph();}});
+register({id:"p32",group:"ocr",num:32,pag:"3 (adapted)",name:"Temperature–time extrapolation",icon:"pg-temp",onShow:()=>{draw();graph();}});
 })();
 </script>
 <script>
-/* PAG 3.3 Hess's law: enthalpy change of hydration of CuSO4 */
+/* PAG 3.2 Hess's law: enthalpy change of hydration of CuSO4 */
 (()=>{
 const {$,C,W,fx,gauss,rows,build,register,bars,setThermo}=LAB, P=PG;
 const EX=[{n:"anhydrous CuSO₄",m:3.19,H:-66.5,col:"#5b9fd8"},{n:"hydrated CuSO₄·5H₂O",m:4.99,H:11.7,col:"#5b9fd8"}];
@@ -6006,7 +6010,7 @@ const st={e:0,T0:+(19.5+Math.random()*1.5).toFixed(1),T:0,busy:false,done:false,
 const cyc=`<g font-size="13" font-family="Arial" fill="#1d2a33"><rect x="560" y="40" width="320" height="200" rx="8" fill="#fbfaf6" opacity=".92" stroke="#cfcac0"/><text x="580" y="78">CuSO₄(s) + 5H₂O(l)</text><text x="760" y="78">→</text><text x="790" y="78">CuSO₄·5H₂O(s)</text><text x="720" y="62" text-anchor="middle" font-size="11" fill="#b4441a">ΔH (hydration) = ?</text><text x="720" y="214" text-anchor="middle">CuSO₄(aq)</text><path d="M640 88L700 196" stroke="#2c5f8a" stroke-width="2" marker-end="url(#p33-ar)"/><path d="M830 88L748 196" stroke="#2c5f8a" stroke-width="2" marker-end="url(#p33-ar)"/><text x="618" y="150" fill="#2c5f8a">ΔH₁</text><text x="808" y="150" fill="#2c5f8a">ΔH₂</text></g><defs><marker id="p33-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2c5f8a"/></marker></defs>`;
 const stage=P.svg("p33","A polystyrene cup with a thermometer and an enthalpy cycle","",`${C.thermo(330,40,280,"p33-th",{tMin:0,tMax:40})}${cyc}`);
 const panel=`<div class="field"><div class="lbl">Experiment</div><div class="seg c1" id="p33-e">${EX.map((e,i)=>`<label class="opt"><input type="radio" name="p33-e" value="${i}" ${i?"":"checked"}><span>${i+1}: dissolve 0.0200 mol of ${e.n} (${e.m} g)</span></label>`).join("")}</div></div>`+P.btns([["p33-go","Add the solid and stir",1]])+P.ro([["p33-T","Temperature"],["p33-dT","ΔT"]])+P.btns([["p33-rec","Record ΔT",1]])+P.note("p33-h","50.0 cm³ of water is in the cup. Add the solid and stir.");
-build({id:"p33",eyebrow:P.eb("3.3","Enthalpy determination"),title:"Hess's law: enthalpy change of hydration of copper(II) sulfate",
+build({id:"p33",eyebrow:P.eb("3.2","Enthalpy determination"),title:"Hess's law: enthalpy change of hydration of copper(II) sulfate",
  intro:"The hydration of anhydrous copper(II) sulfate cannot be measured directly. Measure the enthalpy changes of solution of the anhydrous and hydrated salts, then combine them in a Hess cycle.",
  stage,bar:`<span>ΔH(hydration) = ΔH₁ − ΔH₂</span><span>50.0 g water, c = 4.18 J g⁻¹ K⁻¹</span>`,panel,
  results:P.table("p33",["Experiment","ΔT / K","ΔH / kJ mol⁻¹"]),graphTitle:"Enthalpy changes",graphSub:"Dashed: data-book values",
@@ -6024,7 +6028,7 @@ function work(){ const el=$("#p33-work"); if(!st.res.every(Boolean)){ el.innerHT
   const [a,b]=st.res, {fr,res,step,chips}=W, h=a.H-b.H;
   el.innerHTML=chips([["ΔH₁",`${fx(a.H,1)} kJ mol⁻¹`],["ΔH₂",`${fx(b.H,1)} kJ mol⁻¹`],["Hydration enthalpy",`${fx(h,1)} kJ mol⁻¹`,1]])+`<div class="work" style="margin-top:14px">`+step(1,"Experiment 1",null,[`q = 50.0 × 4.18 × ${fx(a.dT,1)} = ${fx(50*4.18*a.dT,0)} J; ΔH₁ = −${fr(fx(50*4.18*a.dT/1000,3),"0.0200")} = ${fx(a.H,1)} kJ mol⁻¹`])+step(2,"Experiment 2",null,[`q = 50.0 × 4.18 × ${fx(b.dT,1)} = ${fx(50*4.18*b.dT,0)} J; ΔH₂ = ${fx(b.H,1)} kJ mol⁻¹`])+step(3,"Hess cycle","Route via CuSO₄(aq): ΔH(hydration) = ΔH₁ − ΔH₂",[`${fx(a.H,1)} − (${fx(b.H,1)}) = ${res(fx(h,1)+" kJ mol⁻¹")}`])+`</div><p class="muted" style="margin-top:8px">Data-book value: −78.2 kJ mol⁻¹.</p>`; }
 draw(); refresh();
-register({id:"p33",group:"ocr",num:33,pag:"3.3",name:"Hess's law",icon:"pg-hess",onShow:()=>{draw();graph();}});
+register({id:"p33",group:"ocr",num:33,pag:"3.2",name:"Hess's law",icon:"pg-hess",onShow:()=>{draw();graph();}});
 })();
 </script>
 
@@ -6162,15 +6166,15 @@ PG.sepfun=(cx,ty,lo,up,loC,upC)=>{ const w=90,h=150; let g=`<path d="M${cx-8} ${
 PG.still=(T)=>`${PG.mantle(160,330)}${PG.rb(160,250,46,"#e8d9a8",.45)}<rect x="152" y="140" width="16" height="70" fill="url(#g-glass)" stroke="#6f8a96" stroke-width="2"/><path d="M168 160L420 240" stroke="#6f8a96" stroke-width="14" stroke-linecap="round" opacity=".55"/><path d="M200 168L400 232" stroke="#7fb6e8" stroke-width="24" opacity=".3"/><path d="M420 240v50" stroke="#6f8a96" stroke-width="6"/>${GL.flask(420,400,70,.2,"rgba(220,235,245,.6)")}<rect x="157" y="96" width="6" height="66" fill="#fff" stroke="#333" stroke-width=".6"/><text x="176" y="110" font-size="13" fill="#1d2a33">${T}</text><text x="250" y="150" font-size="11" fill="#1d2a33">water out</text><text x="350" y="270" font-size="11" fill="#1d2a33">water in</text>`;
 </script>
 <script>
-/* PAG 5.1 Preparation of an organic liquid: cyclohexene */
+/* PAG 5.2 Preparation of an organic liquid: cyclohexene */
 (()=>{
 const {fx,W}=LAB, P=PG;
 const sc=i=>{ if(i===0) return P.still("85 °C")+`<text x="560" y="120" font-size="14" fill="#1d2a33">cyclohexanol + conc. H₃PO₄</text><text x="560" y="142" font-size="13" fill="#1d2a33">+ anti-bumping granules</text>`;
  if(i===1) return P.sepfun(450,90,.55,.35,"rgba(200,225,240,.8)","rgba(245,240,215,.9)")+`<text x="520" y="170" font-size="13" fill="#1d2a33">upper layer: cyclohexene (ρ = 0.81 g cm⁻³)</text><text x="520" y="240" font-size="13" fill="#1d2a33">lower layer: aqueous (NaCl solution)</text>`;
  if(i===2) return `<g transform="translate(450 400) scale(1.6) translate(-450 -400)">`+GL.flask(450,400,110,.25,"rgba(245,240,215,.8)")+Array.from({length:10},(_,k)=>`<rect x="${420+(k*13)%60}" y="${384-(k*7)%10}" width="7" height="6" fill="#f4f4f0"/>`).join("")+`</g><text x="540" y="250" font-size="14" fill="#1d2a33">anhydrous CaCl₂ (drying agent)</text>`;
  return P.still("83 °C")+`<text x="560" y="120" font-size="14" fill="#1d2a33">redistil the dried liquid</text>`; };
-P.prep({id:"p51",num:51,pag:"5.1",name:"Organic liquid: cyclohexene",icon:"pg-liq",theo:8.20,base:0.74,aria:"Apparatus for preparing and purifying cyclohexene",
- eyebrow:P.eb("5.1","Synthesis of an organic liquid"),title:"Preparing cyclohexene from cyclohexanol",
+P.prep({id:"p51",num:51,pag:"5.2",name:"Organic liquid: cyclohexene",icon:"pg-liq",theo:8.20,base:0.74,aria:"Apparatus for preparing and purifying cyclohexene",
+ eyebrow:P.eb("5.2","Synthesis of an organic liquid"),title:"Preparing cyclohexene from cyclohexanol",
  intro:"Dehydrate 10.0 g of cyclohexanol with concentrated phosphoric acid, distil off the cyclohexene as it forms, then wash, dry and redistil it. Each choice you make affects the yield and purity.",
  bar:`<span>C₆H₁₁OH → C₆H₁₀ + H₂O (H₃PO₄ catalyst)</span><span>bp: cyclohexene 83 °C; cyclohexanol 161 °C</span>`,
  steps:[
@@ -6253,14 +6257,14 @@ register({id:"p81",group:"ocr",num:81,pag:"8.1",name:"Electrochemical cells",ico
 </script>
 
 <script>
-/* PAG 9.1 Continuous monitoring: mass loss */
+/* PAG 9.2 Continuous monitoring: mass loss */
 (()=>{
 const {$,C,W,fx,gauss,rows,build,register,plot,css,setStopwatch,linfit}=LAB, P=PG;
 const K=0.0105*(0.95+Math.random()*0.1);
 const st={c0:1.0,t:0,run:false,m0:0,data:[]};
 const stage=P.svg("p91","A conical flask of marble chips and acid on a balance, with a stopwatch","",`${C.stopwatch(640,250,"p91-sw")}`);
 const panel=`<div class="field"><div class="lbl">Initial concentration of HCl</div><div class="seg c2" id="p91-c"><label class="opt"><input type="radio" name="p91-c" value="1" checked><span>1.00 mol dm⁻³</span></label><label class="opt"><input type="radio" name="p91-c" value="2"><span>2.00 mol dm⁻³</span></label></div></div>`+P.btns([["p91-go","Add the acid and start",1],["p91-re","Reset"]])+P.ro([["p91-t","Time"],["p91-m","Balance"]])+P.note("p91-h","50.0 cm³ of acid with an excess of marble chips. A reading is taken every 30 s.");
-build({id:"p91",eyebrow:P.eb("9.1","Rates of reaction: continuous monitoring"),title:"Order of reaction from a concentration–time graph",
+build({id:"p91",eyebrow:P.eb("9.2","Rates of reaction: continuous monitoring"),title:"Order of reaction from a concentration–time graph",
  intro:"Follow the reaction of hydrochloric acid with excess marble chips by measuring the loss in mass as carbon dioxide escapes. Convert the readings into the concentration of acid remaining and use half-lives to find the order with respect to HCl.",
  stage,bar:`<span>CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂</span><span>[HCl] = c₀(1 − mass lost / final mass lost)</span>`,panel,
  results:P.table("p91",["Time / s","Balance / g","Mass lost / g","[HCl] / mol dm⁻³"]),graphTitle:"Concentration of HCl against time",graphSub:"Constant half-life → first order",
@@ -6283,18 +6287,18 @@ function graph(){ const c=conc(), h=half(); plot($("#p91-graph"),{x:{label:"time
 function work(){ const el=$("#p91-work"), h=half(); if(!h||st.run){ el.innerHTML=`<p class="empty">Complete a run and the half-life analysis will appear here.</p>`; return; }
   const {fr,res,step,chips}=W; el.innerHTML=chips([["Half-life",`${fx(h.th,0)} s`],["Rate constant k",`${fx(h.k,4)} s⁻¹`,1],["Initial rate",`${CH.sci(h.k*st.c0,3)} mol dm⁻³ s⁻¹`]])+`<div class="work" style="margin-top:14px">`+step(1,"Half-lives","Time for [HCl] to fall from c₀ to c₀/2, then c₀/2 to c₀/4",[`each about ${fx(h.th,0)} s: constant, so first order with respect to HCl`])+step(2,"Rate constant","k = ln 2 / t½",[`k = ${fr("0.693",fx(h.th,0))} = ${res(fx(h.k,4)+" s⁻¹")}`])+step(3,"Initial rate","rate = k[HCl]",[`${fx(h.k,4)} × ${fx(st.c0,2)} = ${CH.sci(h.k*st.c0,3)} mol dm⁻³ s⁻¹`])+`</div><p class="muted" style="margin-top:8px">Try the other starting concentration: the half-life stays the same and the initial rate doubles.</p>`; }
 draw(); refresh();
-register({id:"p91",group:"ocr",num:91,pag:"9.1",name:"Continuous monitoring",icon:"pg-rate",onShow:()=>{draw();graph();}});
+register({id:"p91",group:"ocr",num:91,pag:"9.2",name:"Continuous monitoring",icon:"pg-rate",onShow:()=>{draw();graph();}});
 })();
 </script>
 <script>
-/* PAG 9.2 Colorimetry: iodination of propanone */
+/* PAG 9 (adapted) Colorimetry: iodination of propanone */
 (()=>{
 const {$,C,W,fx,gauss,rows,build,register,plot,css,linfit}=LAB, P=PG;
 const EPS=400, I0=0.00200, K=2.6e-6*(0.95+Math.random()*0.1);
 const st={h:1.0,data:[],run:false,t:0};
 const stage=P.svg("p92","A colorimeter with a cuvette of iodine solution");
 const panel=`<div class="field"><div class="lbl">[H⁺] in the mixture</div><div class="seg c2" id="p92-h"><label class="opt"><input type="radio" name="p92-h" value="0.5"><span>0.50 mol dm⁻³</span></label><label class="opt"><input type="radio" name="p92-h" value="1" checked><span>1.00 mol dm⁻³</span></label></div></div>`+P.btns([["p92-go","Mix and start",1]])+P.ro([["p92-t","Time"],["p92-a","Absorbance"]])+P.note("p92-h2","Blue filter. Readings every 60 s. [propanone] = 0.50 mol dm⁻³ (large excess).");
-build({id:"p92",eyebrow:P.eb("9.2","Rates of reaction: continuous monitoring"),title:"Colorimetry: order with respect to iodine",
+build({id:"p92",eyebrow:P.eb("9 (adapted)","Rates of reaction: continuous monitoring"),title:"Colorimetry: order with respect to iodine",
  intro:"Follow the acid-catalysed reaction of iodine with propanone using a colorimeter. Absorbance is proportional to [I₂]. A straight-line graph of absorbance against time shows the reaction is zero order with respect to iodine.",
  stage,bar:`<span>CH₃COCH₃ + I₂ → CH₃COCH₂I + HI (H⁺ catalyst)</span><span>A = 400 × [I₂]</span>`,panel,
  results:P.table("p92",["Time / s","Absorbance","[I₂] / mol dm⁻³"]),graphTitle:"Absorbance against time",graphSub:"A straight line: constant rate",
@@ -6315,7 +6319,7 @@ function work(){ const el=$("#p92-work"); if(st.data.length<6||st.run){ el.inner
   const f=linfit(st.data), r=-f.m/EPS, {fr,res,step,chips}=W;
   el.innerHTML=chips([["Gradient",`${CH.sci(f.m,3)} s⁻¹`],["Rate",`${CH.sci(r,3)} mol dm⁻³ s⁻¹`,1],["[H⁺]",`${fx(st.h,2)} mol dm⁻³`]])+`<div class="work" style="margin-top:14px">`+step(1,"Shape of the graph","Straight line: rate is constant as [I₂] falls",[`zero order with respect to I₂`])+step(2,"Rate of reaction","rate = −gradient ÷ 400",[`${fr(CH.sci(-f.m,3),"400")} = ${res(CH.sci(r,3)+" mol dm⁻³ s⁻¹")}`])+`</div><p class="muted" style="margin-top:8px">Repeat with the other [H⁺]: the rate changes in proportion, so the reaction is first order with respect to H⁺.</p>`; }
 draw(); refresh();
-register({id:"p92",group:"ocr",num:92,pag:"9.2",name:"Colorimetry",icon:"pg-col",onShow:()=>{draw();graph();}});
+register({id:"p92",group:"ocr",num:92,pag:"9 (adapted)",name:"Colorimetry",icon:"pg-col",onShow:()=>{draw();graph();}});
 })();
 </script>
 <script>
@@ -6353,8 +6357,8 @@ clock("p101",{num:101,pag:"10.1",name:"Iodine clock: initial rates",icon:"pg-clo
   const a=st.data.find(r=>r.v===vs[0]), b=st.data.find(r=>r.v===vs[vs.length-1]), ratio=(1/b.t)/(1/a.t), {res,step,chips}=W;
   return chips([["Concentration ratio",fx(b.v/a.v,1)],["Rate ratio",fx(ratio,2),1],["Order in I⁻","1"]])+`<div class="work" style="margin-top:14px">`+step(1,"Compare two runs",null,[`[I⁻] × ${fx(b.v/a.v,1)} (${a.v} → ${b.v} cm³)`,`1/t: ${fx(1/a.t,4)} → ${fx(1/b.t,4)} s⁻¹, × ${fx(ratio,2)}`])+step(2,"Order","rate ∝ [I⁻]ⁿ",[`rate increases by the same factor as [I⁻]: ${res("first order")} with respect to I⁻`])+`</div>`; },
  info:INFO1});
-clock("p102",{num:102,pag:"10.2",name:"Activation energy",icon:"pg-ea",bath:true,heads:["T / °C","t / s","1/T / K⁻¹","ln(1/t)"],
- eyebrow:P.eb("10.2","Rates of reaction: initial rates"),title:"Activation energy from the iodine clock",
+clock("p102",{num:102,pag:"10.3",name:"Activation energy",icon:"pg-ea",bath:true,heads:["T / °C","t / s","1/T / K⁻¹","ln(1/t)"],
+ eyebrow:P.eb("10.3","Rates of reaction: initial rates"),title:"Activation energy from the iodine clock",
  intro:"Repeat the iodine clock with the same mixture at different temperatures. Since k ∝ 1/t, a graph of ln(1/t) against 1/T has gradient −E<sub>a</sub>/R (Arrhenius equation).",
  bar:`<span>ln k = −E<sub>a</sub>/RT + ln A</span><span>R = 8.314 J K⁻¹ mol⁻¹</span>`,
  panel:`<div class="field"><div class="lbl">Water bath temperature <b id="p102-T-l">20 °C</b></div><input type="range" id="p102-T" min="20" max="60" step="5" value="20" aria-label="Water bath temperature"></div>`,
@@ -6371,14 +6375,14 @@ clock("p102",{num:102,pag:"10.2",name:"Activation energy",icon:"pg-ea",bath:true
 })();
 </script>
 <script>
-/* PAG 11.1 pH titration curve */
+/* PAG 11.2 pH titration curve */
 (()=>{
 const {$,C,W,fx,gauss,rows,build,register,plot,css}=LAB, P=PG;
 const AC={weak:{n:"ethanoic acid",Ka:1.74e-5},strong:{n:"hydrochloric acid",Ka:null}};
 const st={a:"weak",v:0,data:[]};
 const stage=`<svg id="p111-svg" viewBox="0 0 900 470" role="img" aria-label="Burette adding alkali to acid in a beaker with a pH probe">${C.room()}${C.stand(300,420,30)}${C.clamp(300,110,440,20)}<g id="p111-g"></g></svg>`;
 const panel=`<div class="field"><div class="lbl">Acid (25.0 cm³, 0.100 mol dm⁻³)</div><div class="seg c2" id="p111-a"><label class="opt"><input type="radio" name="p111-a" value="weak" checked><span>ethanoic acid</span></label><label class="opt"><input type="radio" name="p111-a" value="strong"><span>hydrochloric acid</span></label></div></div>`+P.btns([["p111-1","Add 1.00 cm³ NaOH",1],["p111-05","Add 0.50 cm³"],["p111-re","New beaker"]])+P.ro([["p111-v","Volume of NaOH"],["p111-p","pH"]])+P.note("p111-h","The pH meter has been calibrated with buffer solutions. Add NaOH and record the pH after each addition.");
-build({id:"p111",eyebrow:P.eb("11.1","pH measurement"),title:"pH titration curve and the pK<sub>a</sub> of a weak acid",
+build({id:"p111",eyebrow:P.eb("11.2","pH measurement"),title:"pH titration curve and the pK<sub>a</sub> of a weak acid",
  intro:"Add 0.100 mol dm⁻³ sodium hydroxide from a burette to 25.0 cm³ of 0.100 mol dm⁻³ acid, measuring the pH with a calibrated pH meter after each addition. Use the curve to find the equivalence point and, for the weak acid, pK<sub>a</sub> from the pH at half-neutralisation.",
  stage,bar:`<span>At half-neutralisation [HA] = [A⁻], so pH = pK<sub>a</sub></span><span>Readings recorded automatically</span>`,panel,
  results:P.table("p111",["Volume of NaOH / cm³","pH"]),graphTitle:"pH against volume of NaOH",graphSub:"Use smaller additions near the equivalence point",
@@ -6400,7 +6404,7 @@ function work(){ const el=$("#p111-work"), ve=equiv(); if(!ve){ el.innerHTML=`<p
   const {res,step,chips}=W, half=ve/2, ph=st.data.reduce((b,p)=>Math.abs(p[0]-half)<Math.abs(b[0]-half)?p:b)[1];
   el.innerHTML=chips([["Equivalence volume",`${fx(ve,2)} cm³`],st.a==="weak"?["pK<sub>a</sub>",fx(ph,2),1]:["pH at equivalence","7.00",1]])+`<div class="work" style="margin-top:14px">`+step(1,"Equivalence point","Middle of the steepest section",[`V = ${fx(ve,2)} cm³`])+(st.a==="weak"?step(2,"Half-neutralisation","pH = pK<sub>a</sub> when [HA] = [A⁻]",[`at ${fx(half,2)} cm³, pH = ${fx(ph,2)}`,`K<sub>a</sub> = 10<sup>−${fx(ph,2)}</sup> = ${res(CH.sci(10**-ph,3)+" mol dm⁻³")}`]):step(2,"Strong acid","No buffer region; pH at equivalence = 7",[`starting pH = ${fx(st.data[0][1],2)} = −log 0.100`]))+`</div>`; }
 st.data=[[0,+pH(0).toFixed(2)]]; draw(); refresh();
-register({id:"p111",group:"ocr",num:111,pag:"11.1",name:"pH titration curve",icon:"pg-ph",onShow:()=>{draw();graph();}});
+register({id:"p111",group:"ocr",num:111,pag:"11.2",name:"pH titration curve",icon:"pg-ph",onShow:()=>{draw();graph();}});
 })();
 </script>
 
@@ -6409,7 +6413,7 @@ register({id:"p111",group:"ocr",num:111,pag:"11.1",name:"pH titration curve",ico
 LEARN.unit="papers";
 window.H432={
  topics:{
-  "1":{n:"1 Practical skills",go:"u-lab"},
+  "1":{n:"1 Practical skills",go:"u-measurements"},
   "2.1":{n:"2.1 Atoms and reactions",go:"u-found"},
   "2.2":{n:"2.2 Electrons, bonding and structure",go:"u-bond"},
   "3.1":{n:"3.1 The periodic table",go:"u-period"},
@@ -6828,6 +6832,7 @@ EXAM.paper({id:"fp6",num:6,mins:90,secA:[],secB,group:"g",lvl:"H432/03 style · 
 })();
 </script>
 
+<script src="measurements.js"></script>
 <script>
 LEARN.unit=null;
 Object.assign(LAB.ICONS,{
@@ -6883,10 +6888,12 @@ const U=[
   intro:"Sit each paper under timed conditions, then mark it with the mark schemes. The summary at the end of each paper shows which specification topics to revise.",
   groups:[["papers:f","OCR H432 practice papers · Set 1"],["papers:g","OCR H432 practice papers · Set 2"]]},
  {key:"lab",kind:"Practical endorsement",title:"Practical Lab",sub:"OCR practical activity groups (PAGs)",icon:"u-lab",noun:"practicals",listLabel:"All practicals",
-  desc:"Virtual versions of the OCR Chemistry PAGs: make up solutions, titrate, measure enthalpy changes, test for ions and functional groups, prepare and purify organic compounds, follow rates and measure pH and cell potentials.",
+  desc:"Virtual practicals mapped to OCR Chemistry PAGs, with adapted activities labelled: make up solutions, titrate, measure enthalpy changes, test for ions and functional groups, prepare and purify organic compounds, follow rates and measure pH and cell potentials.",
   intro:"Choose a practical to open it; use Next to work through them in order.",
   groups:[["ocr","OCR A Level Chemistry A · practical activity groups"],["ext","Extension practicals"]]}
 ];
+U.unshift({key:"measurements",kind:"Module 1 · Revision",title:"Measurements and uncertainties",sub:"Practical measurements, titrations and data analysis",icon:"u-measure",noun:"lessons",listLabel:"Measurements and uncertainties lessons",done,intro:IN,
+ desc:"Record and evaluate measurements, calculate uncertainties, select concordant titres, interpret graphs and improve experimental methods.",groups:[["measurements:f","Measurements, uncertainty and evaluation"]]});
 window.HUB_UNITS=U;
 LAB.boot({list:true,units:U,groups:U.flatMap(u=>u.groups),hubIntro:"Choose a module. Lessons take you through each learning outcome with diagrams, simulations, worked examples, quick checks and exam-style questions with mark schemes, and each module ends with a timed mixed exam paper. The Practical Lab lets you carry out the PAG experiments."});
 LEARN.mark();
@@ -6896,6 +6903,8 @@ LAB.list.filter(p=>p.unit).forEach(p=>{ const sec=document.getElementById("lab-"
     const a=document.createElement("a"); a.href="#"+ids[0]; a.className="plink"; b.replaceWith(a); a.appendChild(b); }); });
 })();
 </script>
+
+<script src="topic-search.js"></script>
 
 <script>
 /* Activity tracking (this device only) and the optional student progress report (PDF) */
