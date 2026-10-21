@@ -3,6 +3,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="numeric-tools.js"></script>
+<script>window.ALP_SITE="alevel-chemistry";</script>
+<script src="lab-notebook.js"></script>
 <script src="chemistry-equilibrium.js"></script>
 <title>A Level Chemistry</title>
 <meta name="description" content="OCR A Level Chemistry A: interactive lessons, practicals, topic tests and full practice papers.">
@@ -789,6 +791,7 @@ ${cfg.mid||""}
 ${cfg.work!==false?`<div class="card"><div class="card-h"><h3>${cfg.workTitle||"Worked calculation"}</h3><span class="muted" style="font-size:.85rem">${cfg.workSub||"Uses your own readings"}</span></div><div id="${cfg.id}-work"><p class="empty">${cfg.workEmpty||"Take some readings and the calculation will appear here."}</p></div></div>`:""}
 ${info(cfg.info)}`;
   $(".wrap").appendChild(s);
+  LabNotebook.attach(cfg,s);
   return s;
 }
 
@@ -5789,6 +5792,7 @@ const H=(id,t)=>{ const e=$("#"+id); if(e) e.innerHTML=t; };
 const fitO=pts=>{ let a=0,b=0; pts.forEach(([x,y])=>{ a+=x*y; b+=x*x; }); return b?a/b:null; };
 /* generic titration: cfg {id,num,pag,name,icon,eyebrow,title,intro,bar,VE(),col(x)->[name,css],burCol,endHint,work(mean)->html,info,group} */
 function titration(cfg){ const id=cfg.id; const st={fill:false,r:0,r0:0,added:0,data:[],VE:cfg.VE()};
+ LabNotebook.observe(id,st);
  const stage=`<svg id="${id}-svg" viewBox="0 0 900 470" role="img" aria-label="Burette above a conical flask on a white tile">${C.room()}${C.stand(300,420,30)}${C.clamp(300,110,440,20)}<g id="${id}-g"></g></svg>`;
  const panel=btns([[id+"-fill","Fill the burette"],[id+"-1","Run in 1.00 cm³"],[id+"-01","Add 0.10 cm³"],[id+"-d","Add one drop (0.05)"]])+ro([[id+"-rd","Burette reading"],[id+"-col","Flask colour"]])+btns([[id+"-rec","Record titre",1],[id+"-new","New flask"]])+note(id+"-h","Fill the burette and record the initial reading.");
  build({id,eyebrow:cfg.eyebrow,title:cfg.title,intro:cfg.intro,stage,bar:cfg.bar,panel,
@@ -5819,6 +5823,7 @@ return {svg,eb,btns,ro,note,table,anim,del,H,fitO,titration};
 (()=>{
 const {$,C,W,fx,gauss,rows,build,register,plot,css}=LAB, P=PG;
 const st={m:0,V:0,k:0,busy:false,done:false,data:[]};
+LabNotebook.observe("p11",st);
 const stage=P.svg("p11","A conical flask of acid connected to a gas syringe");
 const panel=P.btns([["p11-new","Weigh a new strip of Mg"],["p11-go","Add Mg to the acid",1]])+P.ro([["p11-m","Mass of Mg"],["p11-v","Gas syringe"]])+P.btns([["p11-rec","Record result",1]])+P.note("p11-h","Weigh a strip of magnesium ribbon.");
 build({id:"p11",eyebrow:P.eb("1.2","Moles determination"),title:"Relative atomic mass of magnesium",
@@ -5857,6 +5862,7 @@ register({id:"p11",group:"ocr",num:11,pag:"1.2",name:"A<sub>r</sub> of magnesium
 const {$,C,W,fx,gauss,rows,build,register,plot}=LAB, P=PG;
 const CR=+(18.2+Math.random()*2).toFixed(2);
 const st={step:0,salt:0,water:0,left:1,heat:0,mass:null,heating:false,data:[]};
+LabNotebook.observe("p12",st);
 const stage=P.svg("p12","A crucible of copper(II) sulfate heated on a pipeclay triangle");
 const panel=P.btns([["p12-add","Add hydrated CuSO₄ to the crucible"],["p12-heat","Heat for 2 minutes",1],["p12-wt","Cool and weigh"]])+P.ro([["p12-bal","Balance"],["p12-col","Colour"]])+P.btns([["p12-new","Start again"]])+P.note("p12-h","The empty crucible has been weighed. Add the hydrated salt.");
 build({id:"p12",eyebrow:P.eb("1 (adapted)","Moles determination"),title:"Water of crystallisation in hydrated copper(II) sulfate",
@@ -5935,7 +5941,8 @@ window.PGcup=(cx,by,lv,col)=>`${LAB.C.shadow(cx,by+3,52,5)}<path d="M${cx-46} ${
 (()=>{
 const {$,C,W,fx,gauss,rows,build,register,bars,setThermo}=LAB, P=PG;
 const AL=[["methanol",32.0,726,1],["ethanol",46.0,1367,2],["propan-1-ol",60.0,2021,3],["butan-1-ol",74.0,2676,4]];
-const st={a:1,T0:+(18+Math.random()*3).toFixed(1),T:0,m0:0,m:0,lit:false,done:false,eff:0.5,data:[]}; st.T=st.T0;
+const st={a:1,T0:+(18+Math.random()*3).toFixed(1),T:0,m0:0,m:0,lit:false,done:false,eff:0.5,data:[]};
+LabNotebook.observe("p31",st); st.T=st.T0;
 const stage=P.svg("p31","A spirit burner heating water in a copper calorimeter",`${C.stand(250,420,90)}`,`${C.clamp(250,180,420,60)}${C.thermo(452,40,250,"p31-th",{tMin:0,tMax:60})}`);
 const panel=`<div class="field"><div class="lbl">Alcohol</div><select id="p31-a">${AL.map((a,i)=>`<option value="${i}" ${i===1?"selected":""}>${a[0]}</option>`).join("")}</select></div>`+P.btns([["p31-w","Weigh the burner"],["p31-l","Light the burner",1],["p31-x","Put it out"]])+P.ro([["p31-T","Temperature"],["p31-dT","Rise"],["p31-m","Burner mass"]])+P.btns([["p31-rec","Reweigh and record",1]])+P.note("p31-h","100 cm³ of water is in the copper can. Weigh the spirit burner.");
 build({id:"p31",eyebrow:P.eb("3.3","Enthalpy determination"),title:"Enthalpy change of combustion of alcohols",
@@ -5974,6 +5981,7 @@ register({id:"p31",group:"ocr",num:31,pag:"3.3",name:"Enthalpy of combustion",ic
 const {$,C,W,fx,gauss,rows,build,register,plot,css,setThermo,linfit}=LAB, P=PG;
 const TA=210, DT=+(50+Math.random()*3).toFixed(1);
 const st={t:0,T0:+(19+Math.random()*2).toFixed(1),added:false,data:[]};
+LabNotebook.observe("p32",st);
 const Tat=t=>{ if(t<TA) return st.T0; const x=t-TA; return st.T0+DT*(1-Math.exp(-x/25))-0.018*x; };
 const stage=P.svg("p32","A polystyrene cup of copper(II) sulfate solution with a thermometer","",`${C.thermo(470,40,280,"p32-th",{tMin:0,tMax:80})}`);
 const panel=P.btns([["p32-r","Take a reading",1],["p32-z","Add the zinc powder (at 3.5 min)"]])+P.ro([["p32-t","Time"],["p32-T","Temperature"]])+P.btns([["p32-new","Start again"]])+P.note("p32-h","Take readings every 30 s. Add the zinc at 3.5 minutes, then keep reading to 10 minutes.");
@@ -6006,7 +6014,8 @@ register({id:"p32",group:"ocr",num:32,pag:"3 (adapted)",name:"Temperature–time
 (()=>{
 const {$,C,W,fx,gauss,rows,build,register,bars,setThermo}=LAB, P=PG;
 const EX=[{n:"anhydrous CuSO₄",m:3.19,H:-66.5,col:"#5b9fd8"},{n:"hydrated CuSO₄·5H₂O",m:4.99,H:11.7,col:"#5b9fd8"}];
-const st={e:0,T0:+(19.5+Math.random()*1.5).toFixed(1),T:0,busy:false,done:false,res:[null,null]}; st.T=st.T0;
+const st={e:0,T0:+(19.5+Math.random()*1.5).toFixed(1),T:0,busy:false,done:false,res:[null,null]};
+LabNotebook.observe("p33",st); st.T=st.T0;
 const cyc=`<g font-size="13" font-family="Arial" fill="#1d2a33"><rect x="560" y="40" width="320" height="200" rx="8" fill="#fbfaf6" opacity=".92" stroke="#cfcac0"/><text x="580" y="78">CuSO₄(s) + 5H₂O(l)</text><text x="760" y="78">→</text><text x="790" y="78">CuSO₄·5H₂O(s)</text><text x="720" y="62" text-anchor="middle" font-size="11" fill="#b4441a">ΔH (hydration) = ?</text><text x="720" y="214" text-anchor="middle">CuSO₄(aq)</text><path d="M640 88L700 196" stroke="#2c5f8a" stroke-width="2" marker-end="url(#p33-ar)"/><path d="M830 88L748 196" stroke="#2c5f8a" stroke-width="2" marker-end="url(#p33-ar)"/><text x="618" y="150" fill="#2c5f8a">ΔH₁</text><text x="808" y="150" fill="#2c5f8a">ΔH₂</text></g><defs><marker id="p33-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2c5f8a"/></marker></defs>`;
 const stage=P.svg("p33","A polystyrene cup with a thermometer and an enthalpy cycle","",`${C.thermo(330,40,280,"p33-th",{tMin:0,tMax:40})}${cyc}`);
 const panel=`<div class="field"><div class="lbl">Experiment</div><div class="seg c1" id="p33-e">${EX.map((e,i)=>`<label class="opt"><input type="radio" name="p33-e" value="${i}" ${i?"":"checked"}><span>${i+1}: dissolve 0.0200 mol of ${e.n} (${e.m} g)</span></label>`).join("")}</div></div>`+P.btns([["p33-go","Add the solid and stir",1]])+P.ro([["p33-T","Temperature"],["p33-dT","ΔT"]])+P.btns([["p33-rec","Record ΔT",1]])+P.note("p33-h","50.0 cm³ of water is in the cup. Add the solid and stir.");
@@ -6037,6 +6046,8 @@ register({id:"p33",group:"ocr",num:33,pag:"3.2",name:"Hess's law",icon:"pg-hess"
 PG.detect=(cfg)=>{ const {$,C,W,rows,build,register}=LAB, P=PG, id=cfg.id;
  const L="ABCDEF".slice(0,cfg.n||6).split(""), pool=cfg.unknowns.slice().sort(()=>Math.random()-.5), U={}; L.forEach((l,i)=>U[l]=pool[i%pool.length][0]);
  const st={u:"A",log:{},ans:{},last:null}; L.forEach(l=>{ st.log[l]=[]; });
+LabNotebook.observe(id+'-samples',U,{keys:Object.keys(U)});
+LabNotebook.observe(id,st);
  const stage=P.svg(id,"A rack of test tubes of unknown solutions and a test tube showing the result of the current test");
  const panel=`<div class="field"><div class="lbl">Unknown</div><div class="seg c3" id="${id}-u">${L.map((l,i)=>`<label class="opt"><input type="radio" name="${id}-u" value="${l}" ${i?"":"checked"}><span>${l}</span></label>`).join("")}</div></div>
 <div class="field"><div class="lbl">Test</div><select id="${id}-t">${cfg.tests.map(([k,t])=>`<option value="${k}">${t}</option>`).join("")}</select></div>`+P.btns([[id+"-go","Do the test",1]])+P.ro([[id+"-o","Observation"]])+`<div class="field"><div class="lbl">Identify this unknown as</div><select id="${id}-a"><option value="">— choose —</option>${cfg.answers.map(([k,t])=>`<option value="${k}">${t}</option>`).join("")}</select></div>`+P.btns([[id+"-sub","Submit identification"]])+P.note(id+"-h","Choose an unknown and a test.");
@@ -6139,6 +6150,7 @@ PG.detect({id:"p71",num:71,pag:"7.1",name:"Organic functional groups",icon:"pg-o
 /* generic multi-step preparation engine: cfg.steps [{t,d,opts:[[label,{y,imp,msg}]]|null, scene(i)}] */
 PG.prep=(cfg)=>{ const {$,C,W,fx,gauss,rows,build,register,bars}=LAB, P=PG, id=cfg.id;
  const st={i:0,y:1,imp:0,log:[],done:false,runs:[]};
+LabNotebook.observe(id,st);
  const stage=P.svg(id,cfg.aria);
  const panel=`<div class="field"><div class="lbl">Step</div><b id="${id}-st" style="font-size:1.02rem"></b><p class="muted" id="${id}-d" style="margin:.35em 0 0"></p></div><div id="${id}-ow"></div>`+P.btns([[id+"-go","Carry out this step",1],[id+"-re","Start again"]])+P.note(id+"-h","");
  build({id,eyebrow:cfg.eyebrow,title:cfg.title,intro:cfg.intro,stage,bar:cfg.bar,panel,results:P.table(id,["Step","Choice","Outcome"]),graphTitle:"Yield of your attempts",graphSub:"Percentage yield of each attempt",info:cfg.info});
@@ -6224,6 +6236,7 @@ P.prep({id:"p61",num:61,pag:"6.1",name:"Organic solid: aspirin",icon:"pg-sol",th
 const {$,C,W,fx,gauss,rows,build,register,bars}=LAB, P=PG;
 const HC=[["zn","Zn²⁺/Zn","−0.76","#c7ccd1","rgba(230,236,240,.5)",-0.76],["fe","Fe²⁺/Fe","−0.44","#6b7177","rgba(170,210,160,.5)",-0.44],["pb","Pb²⁺/Pb","−0.13","#5d6168","rgba(230,236,240,.5)",-0.13],["cu","Cu²⁺/Cu","+0.34","#c46a3c","rgba(70,140,220,.6)",0.34],["fe3","Fe³⁺/Fe²⁺ (Pt)","+0.77","#dfe3e6","rgba(220,170,80,.55)",0.77],["ag","Ag⁺/Ag","+0.80","#e6e8ea","rgba(230,236,240,.5)",0.80]];
 const st={a:0,b:3,sb:true,data:[]};
+LabNotebook.observe("p81",st);
 const stage=P.svg("p81","Two half-cells joined by a salt bridge and a high-resistance voltmeter","",`${C.mm(400,40,"p81-v","V","HIGH RESISTANCE")}`);
 const opt=d=>HC.map((h,i)=>`<option value="${i}" ${i===d?"selected":""}>${h[1]} (E° ${h[2]} V)</option>`).join("");
 const panel=`<div class="field"><div class="lbl">Left half-cell (black lead)</div><select id="p81-a">${opt(0)}</select></div><div class="field"><div class="lbl">Right half-cell (red lead)</div><select id="p81-b">${opt(3)}</select></div><div class="field"><div class="lbl">Salt bridge</div><div class="seg c2" id="p81-s"><label class="opt"><input type="radio" name="p81-s" value="1" checked><span>in place</span></label><label class="opt"><input type="radio" name="p81-s" value="0"><span>removed</span></label></div></div>`+P.ro([["p81-e","Voltmeter reading"],["p81-p","Predicted E<sub>cell</sub>"]])+P.btns([["p81-rec","Record cell",1]])+P.note("p81-h","Choose two half-cells. The salt bridge is filter paper soaked in saturated KNO₃(aq).");
@@ -6262,6 +6275,7 @@ register({id:"p81",group:"ocr",num:81,pag:"8.1",name:"Electrochemical cells",ico
 const {$,C,W,fx,gauss,rows,build,register,plot,css,setStopwatch,linfit}=LAB, P=PG;
 const K=0.0105*(0.95+Math.random()*0.1);
 const st={c0:1.0,t:0,run:false,m0:0,data:[]};
+LabNotebook.observe("p91",st);
 const stage=P.svg("p91","A conical flask of marble chips and acid on a balance, with a stopwatch","",`${C.stopwatch(640,250,"p91-sw")}`);
 const panel=`<div class="field"><div class="lbl">Initial concentration of HCl</div><div class="seg c2" id="p91-c"><label class="opt"><input type="radio" name="p91-c" value="1" checked><span>1.00 mol dm⁻³</span></label><label class="opt"><input type="radio" name="p91-c" value="2"><span>2.00 mol dm⁻³</span></label></div></div>`+P.btns([["p91-go","Add the acid and start",1],["p91-re","Reset"]])+P.ro([["p91-t","Time"],["p91-m","Balance"]])+P.note("p91-h","50.0 cm³ of acid with an excess of marble chips. A reading is taken every 30 s.");
 build({id:"p91",eyebrow:P.eb("9.2","Rates of reaction: continuous monitoring"),title:"Order of reaction from a concentration–time graph",
@@ -6296,6 +6310,7 @@ register({id:"p91",group:"ocr",num:91,pag:"9.2",name:"Continuous monitoring",ico
 const {$,C,W,fx,gauss,rows,build,register,plot,css,linfit}=LAB, P=PG;
 const EPS=400, I0=0.00200, K=2.6e-6*(0.95+Math.random()*0.1);
 const st={h:1.0,data:[],run:false,t:0};
+LabNotebook.observe("p92",st);
 const stage=P.svg("p92","A colorimeter with a cuvette of iodine solution");
 const panel=`<div class="field"><div class="lbl">[H⁺] in the mixture</div><div class="seg c2" id="p92-h"><label class="opt"><input type="radio" name="p92-h" value="0.5"><span>0.50 mol dm⁻³</span></label><label class="opt"><input type="radio" name="p92-h" value="1" checked><span>1.00 mol dm⁻³</span></label></div></div>`+P.btns([["p92-go","Mix and start",1]])+P.ro([["p92-t","Time"],["p92-a","Absorbance"]])+P.note("p92-h2","Blue filter. Readings every 60 s. [propanone] = 0.50 mol dm⁻³ (large excess).");
 build({id:"p92",eyebrow:P.eb("9 (adapted)","Rates of reaction: continuous monitoring"),title:"Colorimetry: order with respect to iodine",
@@ -6328,6 +6343,7 @@ register({id:"p92",group:"ocr",num:92,pag:"9 (adapted)",name:"Colorimetry",icon:
 const {$,C,W,fx,gauss,rows,build,register,plot,css,setStopwatch,linfit}=LAB, P=PG;
 const EA=56000*(0.95+Math.random()*0.1), R=8.314, T20=293.15;
 function clock(id,cfg){ const st={v:10,T:20,t:0,run:false,blue:false,data:[]};
+LabNotebook.observe(id,st);
  const stage=P.svg(id,"A conical flask on a white tile with a stopwatch","",`${C.stopwatch(600,250,id+"-sw")}`);
  build({id,eyebrow:cfg.eyebrow,title:cfg.title,intro:cfg.intro,stage,bar:cfg.bar,panel:cfg.panel+P.btns([[id+"-go","Mix and start the clock",1]])+P.ro([[id+"-t","Time"],[id+"-c","Colour"]])+P.btns([[id+"-rec","Record time"]])+P.note(id+"-h",""),results:P.table(id,cfg.heads),graphTitle:cfg.gt,graphSub:cfg.gs,info:cfg.info});
  function draw(){ let g=`<rect x="250" y="410" width="200" height="10" fill="#f5f5f2"/>`+(cfg.bath?GL.beaker(350,412,210,140,.7,"rgba(120,170,220,.35)"):"")+GL.flask(350,405,130,.32,st.blue?"rgba(20,20,60,.92)":"rgba(240,244,246,.4)");
@@ -6380,6 +6396,7 @@ clock("p102",{num:102,pag:"10.3",name:"Activation energy",icon:"pg-ea",bath:true
 const {$,C,W,fx,gauss,rows,build,register,plot,css}=LAB, P=PG;
 const AC={weak:{n:"ethanoic acid",Ka:1.74e-5},strong:{n:"hydrochloric acid",Ka:null}};
 const st={a:"weak",v:0,data:[]};
+LabNotebook.observe("p111",st);
 const stage=`<svg id="p111-svg" viewBox="0 0 900 470" role="img" aria-label="Burette adding alkali to acid in a beaker with a pH probe">${C.room()}${C.stand(300,420,30)}${C.clamp(300,110,440,20)}<g id="p111-g"></g></svg>`;
 const panel=`<div class="field"><div class="lbl">Acid (25.0 cm³, 0.100 mol dm⁻³)</div><div class="seg c2" id="p111-a"><label class="opt"><input type="radio" name="p111-a" value="weak" checked><span>ethanoic acid</span></label><label class="opt"><input type="radio" name="p111-a" value="strong"><span>hydrochloric acid</span></label></div></div>`+P.btns([["p111-1","Add 1.00 cm³ NaOH",1],["p111-05","Add 0.50 cm³"],["p111-re","New beaker"]])+P.ro([["p111-v","Volume of NaOH"],["p111-p","pH"]])+P.note("p111-h","The pH meter has been calibrated with buffer solutions. Add NaOH and record the pH after each addition.");
 build({id:"p111",eyebrow:P.eb("11.2","pH measurement"),title:"pH titration curve and the pK<sub>a</sub> of a weak acid",
@@ -7247,6 +7264,7 @@ function stats(d){ d=d||{}; const done=new Set((d["learn-motion-done"]||[]).filt
   Object.entries(cs).forEach(([k,v])=>{ const lid=k.split(":")[0]; const u=unitOf(lid); if(v==="ok"){ R.cok++; if(u) R.unit[u.key].cok++; } });
   Object.values(EXAM.PARTS).forEach(p=>{ const v=partScore(p,ex[p.id]); if(v==null) return; const lid=partLesson[p.id], u=unitOf(lid);
     if(PIDS.has(lid)){ const pp=R.paper[lid]=R.paper[lid]||{g:0,m:0}; pp.g+=v; pp.m+=p.m; } else { R.em+=v; R.emk+=p.m; if(u){ R.unit[u.key].em+=v; R.unit[u.key].emk+=p.m; } } });
+  R.labs=LabNotebook.summary(d);
   return R; }
 const pc=(a,b)=>b?Math.round(a/b*100):null;
 const pcell=(a,b)=>{ const p=pc(a,b); return p==null?`<span class="muted">–</span>`:`<span class="td-pc ${p<50?"lo":p<70?"mid":"hi"}">${p} %</span>`; };
@@ -7270,8 +7288,10 @@ function renderDash(){ const c=classes.find(x=>x.id===cur);
 function detail(id){ sel=id; const s=students.find(x=>x.id===id), p=prog[id]||{st:stats({})}, S=p.st;
   const ur=units.map(u=>{ const x=S.unit[u.key]; return `<tr><td>${esc(x.title)}</td><td class="num">${x.done} / ${x.n}</td><td class="num">${pcell(x.cok,x.cq)}</td><td class="num">${pcell(x.em,x.emk)}</td></tr>`; }).join("");
   const pr=PAPERS.map(x=>{ const q=S.paper[x.id]; return `<tr><td>${esc(x.set?x.set+" · ":"")}${esc(x.name)}</td><td class="num">${q?`${q.g} / ${q.m}`:"–"}</td><td class="num">${q?pcell(q.g,q.m):"<span class=\"muted\">not started</span>"}</td></tr>`; }).join("");
+  const labrows=LAB.list.filter(p=>!p.unit&&!p.group?.startsWith("papers:")).map(p=>{const q=S.labs.reviews.find(r=>r.id===p.id);return `<tr><td>${esc(p.name)}</td><td>${q?.complete?"Complete":q?"Started":"Not started"}</td><td>${q?.score==null?"–":q.score+" / 2"}</td><td>${esc(q?.reflection||"")}</td></tr>`;}).join("");
   const opts=classes.filter(c=>c.id!==cur).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("");
   $("#td-d").innerHTML=`<div class="lcard"><h3>${esc(s.display_name||s.username)} <span class="muted" style="font-weight:400;font-size:.95rem">${esc(s.username)} · ${S.days} day${S.days===1?"":"s"} active · ${hm(S.time)}</span></h3>
+   <h4>Practical reviews · ${S.labs.complete} complete</h4><div class="tbl-wrap"><table class="tbl-mini"><thead><tr><th>Practical</th><th>Review</th><th>Skills check</th><th>Conclusion and evaluation (student written)</th></tr></thead><tbody>${labrows}</tbody></table></div>
    <div class="td-two"><div class="tbl-wrap"><table class="tbl-mini"><tr><th>Unit</th><th>Lessons</th><th>Checks</th><th>Exam Qs</th></tr>${ur}</table></div><div class="tbl-wrap"><table class="tbl-mini"><tr><th>Full paper</th><th>Marks</th><th>Score</th></tr>${pr}</table></div></div>
    <div class="td-actions" style="margin-top:14px"><button class="btn" id="td-pw">Reset password</button>${opts?`<select id="td-mv" aria-label="Move to class"><option value="">Move to class…</option>${opts}</select>`:""}<button class="btn" id="td-out">Remove from class</button><button class="btn" id="td-rm">Delete account</button></div></div>`;
   $("#td-d").scrollIntoView({behavior:"smooth",block:"nearest"}); }
