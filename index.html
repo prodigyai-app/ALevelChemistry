@@ -1555,7 +1555,7 @@ function profile(o){ const W=o.W||460, H=o.H||300, ml=50, mb=36, mt=20, pw=W-ml-
   g+=`<text x="${ml+14}" y="${Y(r)-8}" font-size="12">${o.lab&&o.lab.r||"Reactants"}</text><text x="${ml+pw*.64}" y="${Y(p)+(p>r?-8:18)}" font-size="12">${o.lab&&o.lab.p||"Products"}</text>`;
   const ax=ml+pw*.5; g+=LEARN.arr(ax-34,Y(r),ax-34,Y(peak)+2,"acc","",2.2)+`<text x="${ax-40}" y="${(Y(r)+Y(peak))/2+4}" text-anchor="end" font-size="12" class="tacc">${o.eaLab||"E<tspan dy='4' font-size='9'>a</tspan>"}</text>`;
   const dx=ml+pw+12; g+=`<line x1="${ml+pw*.5}" y1="${Y(r)}" x2="${dx+10}" y2="${Y(r)}" class="mut" stroke-width="1.2" stroke-dasharray="4 4"/>`+LEARN.arr(dx,Y(r),dx,Y(p)+(p>r?2:-2),"dat","",2.2)+`<text x="${dx+8}" y="${(Y(r)+Y(p))/2+4}" font-size="12" class="tdat">${o.dhLab||"ΔH"}</text>`;
-  if(o.cat!=null) g+=`<text x="${ax+6}" y="${Y(r+o.cat)-6}" font-size="12" class="tgd">with a catalyst</text>`;
+  if(o.cat!=null) g+=`<text x="${ml+pw*.62}" y="${Y(r+o.cat)+4}" font-size="12" class="tgd">with a catalyst</text>`;
   return g; }
 
 /* ---------- indicators ---------- */
@@ -4427,9 +4427,9 @@ function draw(){ const k=$("#eg1-c").value, S=SALT[k]; const sum=S.steps.reduce(
   const Y=e=>470-(e-bot)/(top-bot)*420; let g="";
   const line=(x1,x2,e,t,cls)=>`<line x1="${x1}" x2="${x2}" y1="${Y(e).toFixed(1)}" y2="${Y(e).toFixed(1)}" class="ink" stroke-width="2.5"/><text x="${x1}" y="${(Y(e)-5).toFixed(1)}" font-size="12" class="${cls||""}">${t}</text>`;
   g+=line(40,300,0,S.el+" (elements)");
-  let x=120; S.steps.forEach((s,i)=>{ const e0=lv[i], e1=lv[i+1]; x=270+i*(300/S.steps.length); g+=LEARN.arr(x,Y(e0),x,Y(e1)+(e1>e0?2:-2),e1>e0?"bd":"gd","",2.2)+`<text x="${x+6}" y="${((Y(e0)+Y(e1))/2+4).toFixed(1)}" font-size="11" class="${e1>e0?"tbd":"tgd"}">${s[0].replace(/<sub>at<\/sub>/,"ₐₜ")} ${s[2]>0?"+":""}${s[2]}</text>`;
+  let x=120; S.steps.forEach((s,i)=>{ const e0=lv[i], e1=lv[i+1]; x=270+i*(300/S.steps.length); const nx=S.steps[i+1], rt=e1>e0&&!(nx&&nx[2]<0); g+=LEARN.arr(x,Y(e0),x,Y(e1)+(e1>e0?2:-2),e1>e0?"bd":"gd","",2.2)+`<text x="${rt?x+6:x-6}" y="${(()=>{let m=(Y(e0)+Y(e1))/2+4; const t=Y(sum); if(Math.abs(m-4-t)<12) m=t+(m-4<t?-8:18); return m;})().toFixed(1)}" font-size="11" text-anchor="${rt?"start":"end"}" class="${e1>e0?"tbd":"tgd"}">${s[0].replace(/<sub>at<\/sub>/,"ₐₜ")} ${s[2]>0?"+":""}${s[2]}</text>`;
     if(i<S.steps.length-1) g+=`<line x1="${x-20}" x2="${x+80}" y1="${Y(e1).toFixed(1)}" y2="${Y(e1).toFixed(1)}" class="mut" stroke-width="1.5"/>`; });
-  g+=line(300,640,sum,S.top,"tacc");
+  g+=`<line x1="300" x2="640" y1="${Y(sum).toFixed(1)}" y2="${Y(sum).toFixed(1)}" class="ink" stroke-width="2.5"/><text x="640" y="${(Y(sum)-6).toFixed(1)}" font-size="12" text-anchor="end" class="tacc">${S.top}</text>`;
   g+=line(40,300,S.f,S.cmp);
   g+=LEARN.arr(220,Y(0),220,Y(S.f)-2,"gd","",2.2)+`<text x="226" y="${((Y(0)+Y(S.f))/2).toFixed(1)}" font-size="11" class="tgd">ΔH<tspan dy="3" font-size="8">f</tspan><tspan dy="-3"> ${S.f}</tspan></text>`;
   g+=LEARN.arr(600,Y(sum),600,Y(S.f)+2,"acc","",3)+`<text x="595" y="${((Y(sum)+Y(S.f))/2).toFixed(1)}" text-anchor="end" font-size="13" font-weight="700" class="tacc">ΔH<tspan dy="3" font-size="9">LE</tspan><tspan dy="-3"> = ${LE}</tspan></text><line x1="560" x2="640" y1="${Y(S.f)}" y2="${Y(S.f)}" class="ink" stroke-width="2.5"/>`;
@@ -4606,10 +4606,10 @@ lesson({id:"eg6",group:"r",num:6,lvl:"5.2.3 · Lesson 6",name:"Electrode potenti
  ],onShow:()=>draw()});
 function draw(){ let a=HC[+$("#eg6-a").value], b=HC[+$("#eg6-b").value]; if(a===b){ set("eg6-w","Choose two different half-cells."); }
   const neg=a[1]<=b[1]?a:b, pos=neg===a?b:a, E=pos[1]-neg[1];
-  const half=(h,x)=>{ let s=GLB.beaker(x,290,170,150,.72,h[5])+`<rect x="${x-14}" y="60" width="28" height="200" fill="${h[4]}" stroke="#0005"/><text x="${x}" y="52" text-anchor="middle" font-size="14" font-weight="700">${h[3]}</text><text x="${x}" y="318" text-anchor="middle" font-size="12">${h[0]} (E⦵ = ${h[1]>0?"+":""}${h[1].toFixed(2)} V)</text>`; if(h[0].startsWith("H⁺")||h[0].startsWith("Cl₂")) s+=`<path d="M${x+40} 60v170" stroke="#9aa0a6" stroke-width="5"/>`+Array.from({length:6},(_,i)=>`<circle cx="${x+40+(i%2)*6}" cy="${200+i*8}" r="3" fill="#fff" opacity=".7"/>`).join(""); return s; };
-  let g=half(a,150)+half(b,550)+`<path d="M190 175V110h320v65" fill="none" stroke="#f4f4f2" stroke-width="16" opacity=".85"/><text x="350" y="104" text-anchor="middle" font-size="12">salt bridge (KNO₃)</text>`;
+  const half=(h,x)=>{ let s=GLB.beaker(x,290,170,150,.72,h[5])+`<rect x="${x-14}" y="60" width="28" height="200" fill="${h[4]}" stroke="#0005"/><text x="${x<350?x-22:x+22}" y="84" text-anchor="${x<350?"end":"start"}" font-size="14" font-weight="700">${h[3]}</text><text x="${x}" y="318" text-anchor="middle" font-size="12">${h[0]} (E⦵ = ${h[1]>0?"+":""}${h[1].toFixed(2)} V)</text>`; if(h[0].startsWith("H⁺")||h[0].startsWith("Cl₂")) s+=`<path d="M${x+40} 60v170" stroke="#9aa0a6" stroke-width="5"/>`+Array.from({length:6},(_,i)=>`<circle cx="${x+40+(i%2)*6}" cy="${200+i*8}" r="3" fill="#fff" opacity=".7"/>`).join(""); return s; };
+  let g=half(a,150)+half(b,550)+`<path d="M190 175V110h320v65" fill="none" stroke="#f4f4f2" stroke-width="16" opacity=".85"/><text x="350" y="94" text-anchor="middle" font-size="12">salt bridge (KNO₃)</text>`;
   g+=`<path d="M150 60V20h160M390 20h160v40" fill="none" class="ink" stroke-width="2.5"/><circle cx="350" cy="20" r="18" class="fpan dat" stroke-width="2.2"/><text x="350" y="26" text-anchor="middle" font-size="15" font-weight="700" class="tdat">V</text><text x="350" y="64" text-anchor="middle" font-size="16" font-weight="700" font-family="var(--f-mono)">${E.toFixed(2)} V</text>`;
-  const dir=neg===a?1:-1; g+=LEARN.arr(dir>0?230:470,8,dir>0?300:400,8,"acc","",2)+`<text x="${dir>0?240:420}" y="${dir>0?42:42}" font-size="11" class="tacc">e⁻</text>`;
+  const dir=neg===a?1:-1; g+=LEARN.arr(dir>0?230:470,8,dir>0?300:400,8,"acc","",2)+`<text x="${dir>0?222:478}" y="12" text-anchor="${dir>0?"end":"start"}" font-size="12" class="tacc">e⁻ flow</text>`;
   $("#eg6-svg").innerHTML=g;
   if(a!==b){ set("eg6-w",`Negative electrode (oxidation): ${f(neg[2]).replace("⇌","→")} (reverse)<br>Positive electrode (reduction): ${f(pos[2])}<br>E⦵<sub>cell</sub> = ${pos[1].toFixed(2)} − (${neg[1].toFixed(2)}) = <b>${E.toFixed(2)} V</b>`); }
   set("eg6-e",E.toFixed(2)+" V"); set("eg6-n",neg[0]); set("eg6-p",pos[0]); }
