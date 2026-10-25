@@ -1485,7 +1485,7 @@ function molg(smi,o={}){ let M=smilesParse(smi); const disp=o.mode==="disp";
     lb+=`<text x="${xx.toFixed(1)}" y="${(p[1]+6.5).toFixed(1)}" text-anchor="${t.anchor}" font-size="${fs}" font-weight="700" class="${a.xh?"h-atom":""}" style="paint-order:stroke;stroke:var(--panel);stroke-width:5px;stroke-linejoin:round">${t.t}</text>`; });
   (o.star||[]).forEach(k=>{ const p=pos[k]; lb+=`<text x="${(p[0]+4).toFixed(1)}" y="${(p[1]-8).toFixed(1)}" font-size="18" font-weight="700" class="tbd">*</text>`; });
   Object.entries(o.lab||{}).forEach(([k,t])=>{ const p=pos[+k]; const v=nb[+k].reduce((s,[y])=>[s[0]+pos[y][0]-p[0],s[1]+pos[y][1]-p[1]],[0,0]); const Lv=Math.hypot(v[0],v[1])||1; const dx=-v[0]/Lv, dy=-v[1]/Lv;
-    const pdx=Math.abs(dx)<.3?18:dx*24, pdy=Math.abs(dy)<.3?-16:dy*24; lb+=`<text x="${(p[0]+pdx).toFixed(1)}" y="${(p[1]+pdy+5).toFixed(1)}" text-anchor="middle" class="${/−|-/.test(t)?"dneg":"dpos"}">${t}</text>`; });
+    const D=showLab(+k)?(atoms[+k].h?36:28):24, pdx=Math.abs(dx)<.3?18:dx*D, pdy=Math.abs(dy)<.3?-16:dy*D; lb+=`<text x="${(p[0]+pdx).toFixed(1)}" y="${(p[1]+pdy+5).toFixed(1)}" text-anchor="middle" class="${/−|-/.test(t)?"dneg":"dpos"}">${t}</text>`; });
   Object.entries(o.lp||{}).forEach(([k,nlp])=>{ const p=pos[+k]; const used=nb[+k].map(([y])=>Math.atan2(pos[y][1]-p[1],pos[y][0]-p[0])*180/Math.PI); const cand=[-90,90,0,180,-45,-135,45,135].filter(a=>used.every(u=>{ const d=Math.abs(((a-u)%360+540)%360-180); return d>50; }));
     cand.slice(0,nlp).forEach(a=>{ const r=15, cx=p[0]+r*Math.cos(D(a)), cy=p[1]+r*Math.sin(D(a)), tx=-Math.sin(D(a))*4, ty=Math.cos(D(a))*4; lb+=`<circle cx="${(cx+tx).toFixed(1)}" cy="${(cy+ty).toFixed(1)}" r="2.3" class="lp"/><circle cx="${(cx-tx).toFixed(1)}" cy="${(cy-ty).toFixed(1)}" r="2.3" class="lp"/>`; }); });
   const xs=pos.map(p=>p[0]), ys=pos.map(p=>p[1]); const pad=o.pad||26; const x0=Math.min(...xs)-pad, y0=Math.min(...ys)-pad, W=Math.max(...xs)-Math.min(...xs)+2*pad, H=Math.max(...ys)-Math.min(...ys)+2*pad;
@@ -7222,7 +7222,7 @@ window.ALP_ACCOUNTS={sb,merge,stats,get user(){ return user; },get profile(){ re
 <script src="assessment-core.js?v=20261023-ks3"></script>
 <script src="assignments.js?v=20261023-ks3"></script>
 <link rel="stylesheet" href="simple-layout.css?v=20261024-desktop">
-<link rel="stylesheet" href="diagram-fit.css?v=20261025-diagrams">
+<link rel="stylesheet" href="diagram-fit.css?v=20261025-labs">
 <script src="simple-layout.js?v=20261024-all"></script>
 <script src="diagram-fit.js?v=20261025-diagrams"></script>
 </body></html>
