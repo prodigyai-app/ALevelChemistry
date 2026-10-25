@@ -2671,7 +2671,7 @@ lesson({id:"pe2",group:"p",num:2,lvl:"3.1.1 · Lesson 2",name:"Metallic and gian
   B.mistakes(["Saying metals contain 'atoms' rather than cations in a sea of electrons.","Saying covalent bonds break when phosphorus melts.","Saying graphite conducts because of ions."])
  ],onShow:()=>{draw();drawS();}});
 function draw(){ const p=CH.radio("pe2-p"), D=p==="2"?P2:P3; const A=axes({W:620,H:330,x0:0,x1:9,y0:-300,y1:3900,xs:0,ys:600,xt:"element",yt:"melting point / °C",ml:62});
-  let g=""; const bw=44; D.forEach(([e,m,t],i)=>{ const x=A.X(i+1); g+=`<rect x="${x-bw/2}" y="${Math.min(A.Y(m),A.Y(0))}" width="${bw}" height="${Math.abs(A.Y(m)-A.Y(0))}" fill="${COL[typ(t)]}" rx="3"/><text x="${x}" y="${A.Y(-300)+16}" text-anchor="middle" font-size="13" font-weight="700">${e}</text><text x="${x}" y="${(m>=0?A.Y(m)-6:A.Y(m)+14)}" text-anchor="middle" font-size="11">${m}</text>`; });
+  let g=""; const bw=44; D.forEach(([e,m,t],i)=>{ const x=A.X(i+1); g+=`<rect x="${x-bw/2}" y="${Math.min(A.Y(m),A.Y(0))}" width="${bw}" height="${Math.abs(A.Y(m)-A.Y(0))}" fill="${COL[typ(t)]}" rx="3"/><text x="${x}" y="${A.Y(-300)+16}" text-anchor="middle" font-size="13" font-weight="700">${e}</text><text x="${x}" y="${(m>=0?A.Y(m)-6:A.Y(0)-6)}" text-anchor="middle" font-size="11">${m<0?"−"+(-m):m}</text>`; });
   g+=`<line x1="${A.X(0)}" x2="${A.X(9)}" y1="${A.Y(0)}" y2="${A.Y(0)}" class="ax"/>`;
   $("#pe2-g").innerHTML=A.g+g; }
 function drawS(){ const s=CH.radio("pe2-s"); let g=""; const C=(x,y,r,f)=>`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${f}" stroke="#0005"/>`;
@@ -7222,5 +7222,7 @@ window.ALP_ACCOUNTS={sb,merge,stats,get user(){ return user; },get profile(){ re
 <script src="assessment-core.js?v=20261023-ks3"></script>
 <script src="assignments.js?v=20261023-ks3"></script>
 <link rel="stylesheet" href="simple-layout.css?v=20261024-desktop">
+<link rel="stylesheet" href="diagram-fit.css?v=20261025-diagrams">
 <script src="simple-layout.js?v=20261024-all"></script>
+<script src="diagram-fit.js?v=20261025-diagrams"></script>
 </body></html>
